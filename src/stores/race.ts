@@ -61,12 +61,17 @@ export const useRaceStore = defineStore('race', () => {
     status.value = 'idle'
   }
 
+  const horseNameById = computed(
+    () => new Map(horses.value.map((horse) => [horse.id, horse.name])),
+  );
+
   return {
     horses,
     schedule,
     results,
     currentRound,
     status,
+    horseNameById,
     init,
     createSchedule,
     runNextRound,

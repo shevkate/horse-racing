@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { Horse, RaceRound, RaceStatus, RoundResult } from '@/types'
 import { generateHorses, generateSchedule } from '@/utils'

@@ -15,15 +15,15 @@ const statusLabels: Record<RaceStatus, string> = {
 const statusLabel = computed(() => statusLabels[raceStore.status]);
 
 const isGenerateDisabled = computed(() => raceStore.status === 'running');
-const isStartDisabled = computed(
-  () => raceStore.schedule.length === 0 || raceStore.status === 'finished',
-);
+const isStartDisabled = computed(() => raceStore.status !== 'scheduled');
 const isNextRoundDisabled = computed(
   () =>
     raceStore.status === 'idle' ||
     raceStore.status === 'finished' ||
     raceStore.schedule.length === 0,
 );
+
+const primaryAction = computed<RaceStatus>(() => raceStore.status);
 
 const handleGenerate = (): void => {
   raceStore.createSchedule();
@@ -50,19 +50,40 @@ const handleReset = (): void => {
     </span>
 
     <div class="controls__buttons">
-      <button type="button" :disabled="isGenerateDisabled" @click="handleGenerate">
+      <button
+        type="button"
+        :class="{ primary: primaryAction === 'idle' }"
+        :disabled="isGenerateDisabled"
+        @click="handleGenerate"
+      >
         Generate
       </button>
 
-      <button type="button" class="primary" :disabled="isStartDisabled" @click="handleStart">
+      <button
+        type="button"
+        :class="{ primary: primaryAction === 'scheduled' }"
+        :disabled="isStartDisabled"
+        @click="handleStart"
+      >
         Start
       </button>
 
-      <button type="button" :disabled="isNextRoundDisabled" @click="handleNextRound">
+      <button
+        type="button"
+        :class="{ primary: primaryAction === 'running' }"
+        :disabled="isNextRoundDisabled"
+        @click="handleNextRound"
+      >
         Next round
       </button>
 
-      <button type="button" @click="handleReset">Reset</button>
+      <button
+        type="button"
+        :class="{ primary: primaryAction === 'finished' }"
+        @click="handleReset"
+      >
+        Reset
+      </button>
     </div>
   </div>
 </template>

@@ -87,8 +87,11 @@ button:hover:not(:disabled) {
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
 }
 
 button.primary {

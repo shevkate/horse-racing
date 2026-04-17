@@ -35,9 +35,16 @@ const computeDurations = (
   distance: number,
 ): Map<HorseId, number> => {
   const base = baseDuration(distance);
-  const scores = items.map((i) => i.score);
-  const maxScore = Math.max(...scores);
-  const minScore = Math.min(...scores);
+  // Single-pass min/max via reduce. `Math.max(...scores)` spreads the array
+  // into argument positions, which has an engine-dependent arg-count limit
+  // (~100k on V8). Safe today at 10 horses per round, but reduce removes
+  // the latent foot-gun if HORSES_PER_ROUND ever grows.
+  let maxScore = -Infinity;
+  let minScore = Infinity;
+  for (const { score } of items) {
+    if (score > maxScore) maxScore = score;
+    if (score < minScore) minScore = score;
+  }
   const scoreRange = maxScore - minScore || 1; // avoid /0 when all scores equal
 
   return new Map(

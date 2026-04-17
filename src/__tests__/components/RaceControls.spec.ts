@@ -6,16 +6,22 @@ import RaceControls from '@/components/RaceControls.vue';
 import { useRaceStore } from '@/stores/race';
 import type { RaceStatus } from '@/types';
 
+// Button order in RaceControls.vue — kept as constants so tests stay readable
+// and the indices are meaningful instead of magic numbers.
+const BUTTON = {
+  Generate: 0,
+  Start: 1,
+  Pause: 2,
+  Resume: 3,
+  Reset: 4,
+} as const;
+
 const mountComponent = (status: RaceStatus) => {
   setActivePinia(createPinia());
-
   const store = useRaceStore();
   store.$patch({ status });
 
-  return {
-    store,
-    wrapper: mount(RaceControls),
-  };
+  return { store, wrapper: mount(RaceControls) };
 };
 
 describe('RaceControls', () => {
@@ -23,109 +29,78 @@ describe('RaceControls', () => {
     vi.restoreAllMocks();
   });
 
-  it.each([
-    ['idle', 'Ready'],
-    ['scheduled', 'Schedule ready'],
-    ['running', 'Race in progress'],
-    ['finished', 'Race finished'],
-  ] satisfies [RaceStatus, string][])('renders correct status label for %s', (status, label) => {
-    const { wrapper } = mountComponent(status);
+  describe('status label rendering', () => {
+    it.each([
+      ['idle', 'Ready'],
+      ['scheduled', 'Schedule ready'],
+      ['running', 'Race in progress'],
+      ['paused', 'Paused'],
+      ['finished', 'Race finished'],
+    ] satisfies [RaceStatus, string][])('renders "%s" label in %s state', (status, label) => {
+      const { wrapper } = mountComponent(status);
 
-    expect(wrapper.text()).toContain(label);
-    expect(wrapper.find('.controls__status-dot').attributes('data-status')).toBe(status);
+      expect(wrapper.text()).toContain(label);
+      expect(wrapper.find('.controls__status-dot').attributes('data-status')).toBe(status);
+    });
   });
 
-  it('enables only Generate button in idle state', () => {
-    const { wrapper } = mountComponent('idle');
-    const buttons = wrapper.findAll('button');
+  describe('button enabled/active matrix', () => {
+    // For every status we know which button should be "primary" (active)
+    // and which should be enabled. Encoding the expectation as a table
+    // keeps the test compact and easy to update when buttons change.
+    type Enabled = [boolean, boolean, boolean, boolean, boolean]; // [G, S, P, R, Reset]
 
-    expect(buttons[0].text()).toBe('Generate');
-    expect(buttons[0].attributes('disabled')).toBeUndefined();
-    expect(buttons[0].classes()).toContain('primary');
+    it.each([
+      // status,       enabled flags,               primary label
+      ['idle', [true, false, false, false, true], 'Generate'],
+      ['scheduled', [true, true, false, false, true], 'Start'],
+      ['running', [false, false, true, false, true], 'Pause'],
+      ['paused', [false, false, false, true, true], 'Resume'],
+      ['finished', [true, false, false, false, true], 'Reset'],
+    ] satisfies [RaceStatus, Enabled, string][])(
+      'in %s state: correct enabled buttons and active=%s',
+      (status, enabled, primaryLabel) => {
+        const { wrapper } = mountComponent(status);
+        const buttons = wrapper.findAll('button');
 
-    expect(buttons[1].attributes('disabled')).toBeDefined();
-    expect(buttons[2].attributes('disabled')).toBeDefined();
-    expect(buttons[3].attributes('disabled')).toBeUndefined();
+        expect(buttons).toHaveLength(5);
+
+        enabled.forEach((isEnabled, index) => {
+          const disabledAttr = buttons[index]!.attributes('disabled');
+          expect(disabledAttr === undefined).toBe(isEnabled);
+        });
+
+        const activeButton = buttons.find((btn) => btn.classes().includes('primary'));
+        expect(activeButton?.text()).toBe(primaryLabel);
+      },
+    );
   });
 
-  it('enables only Start button in scheduled state', () => {
-    const { wrapper } = mountComponent('scheduled');
-    const buttons = wrapper.findAll('button');
+  describe('click handlers', () => {
+    // Each handler test: set the status that enables the button, spy on
+    // the store action BEFORE mount (required — `buttons` computed captures
+    // the handler references at mount time), then trigger the click.
+    it.each([
+      ['Generate', 'idle', BUTTON.Generate, 'createSchedule'],
+      ['Start', 'scheduled', BUTTON.Start, 'startRace'],
+      ['Pause', 'running', BUTTON.Pause, 'pauseRace'],
+      ['Resume', 'paused', BUTTON.Resume, 'resumeRace'],
+      ['Reset', 'finished', BUTTON.Reset, 'resetRace'],
+    ] satisfies [
+      string,
+      RaceStatus,
+      number,
+      'createSchedule' | 'startRace' | 'pauseRace' | 'resumeRace' | 'resetRace',
+    ][])('calls %s action on %s-state click', async (_, status, index, action) => {
+      setActivePinia(createPinia());
+      const store = useRaceStore();
+      store.$patch({ status });
+      const spy = vi.spyOn(store, action).mockImplementation(() => {});
 
-    expect(buttons[0].attributes('disabled')).toBeUndefined();
-    expect(buttons[1].attributes('disabled')).toBeUndefined();
-    expect(buttons[1].classes()).toContain('primary');
-    expect(buttons[2].attributes('disabled')).toBeDefined();
-    expect(buttons[3].attributes('disabled')).toBeUndefined();
-  });
+      const wrapper = mount(RaceControls);
 
-  it('enables only Next round button in running state and disables Generate', () => {
-    const { wrapper } = mountComponent('running');
-    const buttons = wrapper.findAll('button');
-
-    expect(buttons[0].attributes('disabled')).toBeDefined();
-    expect(buttons[1].attributes('disabled')).toBeDefined();
-    expect(buttons[2].attributes('disabled')).toBeUndefined();
-    expect(buttons[2].classes()).toContain('primary');
-    expect(buttons[3].attributes('disabled')).toBeUndefined();
-  });
-
-  it('marks Reset button as active in finished state', () => {
-    const { wrapper } = mountComponent('finished');
-    const buttons = wrapper.findAll('button');
-
-    expect(buttons[0].attributes('disabled')).toBeUndefined();
-    expect(buttons[1].attributes('disabled')).toBeDefined();
-    expect(buttons[2].attributes('disabled')).toBeDefined();
-    expect(buttons[3].attributes('disabled')).toBeUndefined();
-    expect(buttons[3].classes()).toContain('primary');
-  });
-
-  it('calls createSchedule on Generate click', async () => {
-    setActivePinia(createPinia());
-    const store = useRaceStore();
-    store.$patch({ status: 'idle' });
-    const spy = vi.spyOn(store, 'createSchedule');
-
-    const wrapper = mount(RaceControls);
-
-    await wrapper.findAll('button')[0].trigger('click');
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls startRace on Start click', async () => {
-    setActivePinia(createPinia());
-    const store = useRaceStore();
-    store.$patch({ status: 'scheduled' });
-    const spy = vi.spyOn(store, 'startRace');
-
-    const wrapper = mount(RaceControls);
-
-    await wrapper.findAll('button')[1].trigger('click');
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls runNextRound on Next round click', async () => {
-    setActivePinia(createPinia());
-    const store = useRaceStore();
-    store.$patch({ status: 'running' });
-    const spy = vi.spyOn(store, 'runNextRound');
-
-    const wrapper = mount(RaceControls);
-
-    await wrapper.findAll('button')[2].trigger('click');
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls resetRace on Reset click', async () => {
-    setActivePinia(createPinia());
-    const store = useRaceStore();
-    store.$patch({ status: 'finished' });
-    const spy = vi.spyOn(store, 'resetRace');
-
-    const wrapper = mount(RaceControls);
-
-    await wrapper.findAll('button')[3].trigger('click');
-    expect(spy).toHaveBeenCalledTimes(1);
+      await wrapper.findAll('button')[index]!.trigger('click');
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -6,13 +6,6 @@
 
 export const ANIMATION_TIMINGS = {
   /**
-   * Delay between placing horses at the start (progress=0, duration=0) and
-   * triggering the CSS transition to progress=100. The browser needs one
-   * paint at progress=0 first, otherwise the transition collapses to nothing.
-   */
-  preRollMs: 50,
-
-  /**
    * Pause between rounds before the next one auto-starts. Also the window
    * in which a user's Pause click actually takes effect (mid-round clicks
    * are deferred until this gap), so it needs to be wide enough to aim at.

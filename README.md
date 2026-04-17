@@ -1,5 +1,7 @@
 # Horse Racing Game
 
+**🐎 Live demo:** [shevkate.github.io/horse-racing](https://shevkate.github.io/horse-racing/)
+
 A browser-based horse racing simulator. Twenty horses compete across a
 randomly generated six-round schedule; each horse rides in ten rounds.
 Round winners are chosen by a condition-weighted score and visualised as
@@ -91,10 +93,30 @@ pause/resume and mid-race reset are race-condition-free. Use
 - **`prefers-reduced-motion`** — the horse-bounce keyframe is disabled;
   the linear `left` transition (the race itself) stays so there's still
   something to watch.
-- **Live region** — an `aria-live="polite"` status announcer names the
-  winner of each completed round and the final "Race finished." line.
+- **Live region** — a `role="log" aria-live="polite"` announcer names
+  the winner of each completed round and the final "Race finished."
+  line. `log` fits the sequential-entries UX of race commentary better
+  than `status`, which denotes a single current state.
 - **Keyboard shortcut** — <kbd>Space</kbd> toggles Start/Pause outside
   form controls.
+
+## Resilience
+
+A top-level `onErrorCaptured` boundary in `App.vue` swaps the UI for a
+minimal fallback if a descendant render/lifecycle throws. A **Reload**
+button clears the error and re-initialises the store so the user can
+recover without a full page refresh.
+
+## Responsive layout
+
+Three breakpoints driven by `grid-template-areas` — markup stays put,
+only the area map changes:
+
+- **≥1100px** — three columns: horses / track / schedule.
+- **700-1099px** — horses as a narrow sidebar beside the track;
+  schedule promoted to a full-width row below.
+- **<700px** — single-column stack; horse list capped at ~300px so the
+  track stays above the fold.
 
 ## Testing
 
@@ -105,9 +127,11 @@ pause/resume and mid-race reset are race-condition-free. Use
   three `RaceTrack` states (empty / lineup / podium). A global
   serializer (`src/__tests__/setup.ts`) strips scoped-CSS `data-v-*`
   hashes so snapshots don't rot on style edits.
-- **E2E** — one Cypress spec drives the full lifecycle (Generate →
-  Start → Pause → Resume → Finish → Reset). Selectors go through
-  `[data-testid="…"]` rather than CSS classes.
+- **E2E** — a Cypress spec drives the full lifecycle (Generate →
+  Start → Pause → Resume → Finish → "play again") plus the
+  <kbd>Space</kbd> shortcut, the live-region announcer, and the three
+  responsive breakpoints. Selectors go through `[data-testid="…"]`
+  rather than CSS classes.
 
 Run everything:
 
@@ -119,8 +143,12 @@ npm run type-check && npm run lint && npm run test:unit && npm run build && npm 
 
 GitHub Actions runs two parallel jobs on every PR to `main`:
 
-- **ci** — lint, type-check, unit tests, build.
+- **ci** — lint, type-check, unit tests, build, and a gzipped
+  bundle-size gate (fails if JS > 45 KB or CSS > 5 KB gzipped).
 - **e2e** — Cypress against the built bundle via
   [`cypress-io/github-action`](https://github.com/cypress-io/github-action).
 
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+A third workflow ([`deploy.yml`](.github/workflows/deploy.yml)) publishes
+the built bundle to GitHub Pages on every push to `main`.

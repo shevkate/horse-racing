@@ -34,6 +34,29 @@ jobs:
       - name: Build
         run: npm run build-only
 
+      # Bundle-size guard. Fails the build if the gzipped JS or CSS output
+      # grows past the threshold — catches accidental dep bloat in review
+      # before it ships. Thresholds sit ~25-50% above the current sizes:
+      # real feature work has headroom, but adding moment.js or lodash-all
+      # trips the wire. Update the numbers (in the same commit as the
+      # change that needs them) rather than raising them silently.
+      - name: Bundle size check
+        run: |
+          set -euo pipefail
+          JS_LIMIT=45000   # bytes, gzipped (current ~33 KB)
+          CSS_LIMIT=5000   # bytes, gzipped (current ~2.7 KB)
+
+          js_size=$(find dist/assets -name '*.js'  -exec gzip -c {} \; | wc -c)
+          css_size=$(find dist/assets -name '*.css' -exec gzip -c {} \; | wc -c)
+
+          printf 'JS  gzip: %s bytes (limit %s)\n'  "$js_size"  "$JS_LIMIT"
+          printf 'CSS gzip: %s bytes (limit %s)\n'  "$css_size" "$CSS_LIMIT"
+
+          fail=0
+          if [ "$js_size"  -gt "$JS_LIMIT"  ]; then echo "::error::JS bundle exceeds gzip limit";  fail=1; fi
+          if [ "$css_size" -gt "$CSS_LIMIT" ]; then echo "::error::CSS bundle exceeds gzip limit"; fail=1; fi
+          exit $fail
+
   # E2E runs in a separate job so the two suites are parallel wall-clock
   # and a flaky E2E doesn't mask a fast unit/lint failure. Uses the official
   # Cypress action for free binary caching + build/start/wait orchestration.

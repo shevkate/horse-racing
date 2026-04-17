@@ -1,0 +1,64 @@
+# Deploys the built app to GitHub Pages on every push to main.
+# Pages is configured to use GitHub Actions as the source (Settings →
+# Pages → Build and deployment → Source: "GitHub Actions").
+#
+# The build is rerun here rather than reused from the CI workflow — it's
+# a few seconds, and keeping deploy self-contained avoids cross-workflow
+# artifact plumbing. BASE_PATH matches the repo subpath so asset URLs
+# resolve under https://<user>.github.io/horse-racing/.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Allow only one concurrent deployment; skip runs queued behind a newer
+# commit so we don't publish stale builds.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          BASE_PATH: /horse-racing/
+        run: npm run build-only
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

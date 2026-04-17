@@ -81,7 +81,7 @@ describe('RaceTrack', () => {
       const wrapper = mount(RaceTrack);
 
       expect(wrapper.text()).toContain('Click Generate');
-      expect(wrapper.findAll('.lane')).toHaveLength(0);
+      expect(wrapper.findAll('[data-testid="lane"]')).toHaveLength(0);
     });
 
     it('shows "Preparing track…" hint when non-idle with no lineup', () => {
@@ -106,7 +106,7 @@ describe('RaceTrack', () => {
 
     it('renders one lane per horse in currentAnimation', () => {
       const wrapper = mount(RaceTrack);
-      expect(wrapper.findAll('.lane')).toHaveLength(4);
+      expect(wrapper.findAll('[data-testid="lane"]')).toHaveLength(4);
     });
 
     it('renders lane numbers 1..N in order', () => {
@@ -126,7 +126,7 @@ describe('RaceTrack', () => {
     it('shows badges for top 3 horses when not animating', () => {
       setupTrack({ status: 'paused', withLineup: true, withResult: true });
       const wrapper = mount(RaceTrack);
-      const badges = wrapper.findAll('.lane__badge');
+      const badges = wrapper.findAll('[data-testid="podium-badge"]');
 
       expect(badges).toHaveLength(3);
       expect(badges[0]!.text()).toContain('#1');
@@ -146,7 +146,7 @@ describe('RaceTrack', () => {
       });
       const wrapper = mount(RaceTrack);
 
-      expect(wrapper.findAll('.lane__badge')).toHaveLength(0);
+      expect(wrapper.findAll('[data-testid="podium-badge"]')).toHaveLength(0);
     });
 
     it('applies podium class to top 3 horse icons only', () => {

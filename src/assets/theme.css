@@ -11,6 +11,13 @@
   --track-lane-alt: #7a5f3d;
   --track-finish: #d84343;
 
+  /* Track geometry — lane height, horse dimensions and their padding.
+     Kept here (not inline in RaceTrack.vue) so the visible track tuning
+     lives alongside other design tokens. */
+  --horse-size: 52px;
+  --lane-pad: 4px;
+  --horse-bounce-duration: 0.35s;
+
   /* Accent */
   --accent: #f5c518;
   --accent-muted: #c9a213;

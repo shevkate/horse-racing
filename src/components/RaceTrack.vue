@@ -158,13 +158,9 @@ const activeRound = computed(() => raceStore.displayedRound);
   text-align: center;
 }
 
-/* single source of truth for all horse geometry.
-   Change --horse-size here and the lane, the icon, and the finish offset
-   (calc in inline style) all stay in sync! */
+/* Lane geometry uses --horse-size / --lane-pad from theme.css so the
+   lane, icon, bounce animation and finish offset all stay in sync. */
 .lane__strip {
-  --horse-size: 52px;
-  --lane-pad: 4px;
-
   position: relative;
   height: var(--horse-size);
   background: repeating-linear-gradient(
@@ -202,7 +198,7 @@ const activeRound = computed(() => raceStore.displayedRound);
 }
 
 .lane__horse--running {
-  animation: horse-run-bounce 0.35s ease-in-out infinite;
+  animation: horse-run-bounce var(--horse-bounce-duration) ease-in-out infinite;
   transform-origin: center;
 }
 

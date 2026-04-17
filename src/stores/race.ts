@@ -33,9 +33,13 @@ export const useRaceStore = defineStore('race', () => {
     () => new Map(horses.value.map((horse) => [horse.id, horse.name])),
   );
 
+  // Schedule rounds are 1-indexed and always dense (round N sits at index
+  // N-1), so we can skip the `.find` scan and index directly. Falls back
+  // to `?? null` so a stale `displayedRoundNumber` pointing past the end
+  // of a regenerated schedule still returns null instead of undefined.
   const displayedRound = computed<RaceRound | null>(() => {
     if (displayedRoundNumber.value == null) return null;
-    return schedule.value.find((r) => r.round === displayedRoundNumber.value) ?? null;
+    return schedule.value[displayedRoundNumber.value - 1] ?? null;
   });
 
   // ---- Internal: auto-advance loop --------------------------------------

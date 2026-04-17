@@ -92,7 +92,7 @@ describe('Horse Racing — full race flow', () => {
     cy.get(`${testid('place')}[data-podium]`).should('have.length', 18); // 6 rounds × 3 podium places
   });
 
-  it('Generate after finish wipes state and starts over', () => {
+  it('Generate after finish wipes state and a fresh race can start ("play again")', () => {
     cy.visit('/');
     cy.get(testid('btn-generate')).click();
     cy.get(testid('btn-toggle')).click();
@@ -101,11 +101,20 @@ describe('Horse Racing — full race flow', () => {
       'Race finished',
     );
 
+    // Generate in the finished state is the intentional "play again" path —
+    // the 2-button layout doesn't have a dedicated Reset. Wipes results,
+    // rebuilds the schedule, and the toggle must re-enable so the next
+    // race can actually start.
     cy.get(testid('btn-generate')).click();
 
     cy.get(testid('race-status')).should('contain', 'Schedule ready');
     cy.get(testid('round-result')).should('not.exist');
     cy.get(testid('schedule-round')).should('have.length', 6);
+
+    // Second race actually runs — not just that state was reset.
+    cy.get(testid('btn-toggle')).should('be.enabled').and('contain', 'Start').click();
+    cy.get(testid('race-status')).should('contain', 'Race in progress');
+    cy.get(testid('round-result'), { timeout: 15_000 }).should('have.length.gte', 1);
   });
 });
 

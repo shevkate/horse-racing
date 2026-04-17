@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useRaceStore } from '@/stores/race';
+import { useRaceStore } from '@/stores/race'
 
-const raceStore = useRaceStore();
+const raceStore = useRaceStore()
 </script>
 
 <template>
@@ -11,11 +11,26 @@ const raceStore = useRaceStore();
     <ul v-if="raceStore.horses.length" class="list">
       <li v-for="horse in raceStore.horses" :key="horse.id" class="list__item">
         <span class="horse">
-          <span class="horse__color" :style="{ backgroundColor: horse.color }" />
+          <span
+            class="horse__color"
+            :style="{ backgroundColor: horse.color }"
+            :aria-label="`Horse color ${horse.color}`"
+            role="img"
+          />
           <span class="horse__name">{{ horse.name }}</span>
         </span>
 
-        <span class="horse__condition">{{ horse.condition }}</span>
+        <span
+          class="horse__condition"
+          role="progressbar"
+          :aria-valuenow="horse.condition"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-label="`${horse.name} condition`"
+        >
+          <span class="horse__bar" :style="{ width: `${horse.condition}%` }" />
+          <span class="horse__value">{{ horse.condition }}</span>
+        </span>
       </li>
     </ul>
 
@@ -50,7 +65,7 @@ const raceStore = useRaceStore();
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 560px;
+  max-height: 70vh;
   overflow-y: auto;
 }
 
@@ -76,8 +91,8 @@ const raceStore = useRaceStore();
 }
 
 .horse__color {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -90,8 +105,40 @@ const raceStore = useRaceStore();
 }
 
 .horse__condition {
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+  position: relative;
+  flex-shrink: 0;
+  width: 120px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--bg-track-fill);
+  overflow: hidden;
+}
+
+.horse__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--condition-low) 0%,
+    var(--condition-mid) 50%,
+    var(--condition-high) 100%
+  );
+  background-size: 120px 100%;
+  transition: width 0.3s ease;
+}
+
+.horse__value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  pointer-events: none;
 }
 </style>

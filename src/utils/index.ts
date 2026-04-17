@@ -2,4 +2,5 @@
 export * from './generateHorses';
 export * from './generateSchedule';
 export * from './random';
+export * from './resolveRoundHorses';
 export * from './runRound';

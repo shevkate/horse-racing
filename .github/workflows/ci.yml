@@ -33,3 +33,27 @@ jobs:
 
       - name: Build
         run: npm run build-only
+
+  # E2E runs in a separate job so the two suites are parallel wall-clock
+  # and a flaky E2E doesn't mask a fast unit/lint failure. Uses the official
+  # Cypress action for free binary caching + build/start/wait orchestration.
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Run Cypress
+        uses: cypress-io/github-action@v6
+        with:
+          build: npm run build-only
+          start: npm run preview
+          wait-on: 'http://localhost:4173'
+          wait-on-timeout: 60

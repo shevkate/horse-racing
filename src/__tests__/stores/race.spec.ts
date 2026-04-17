@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
 import { useRaceStore } from '@/stores/race';
 import type { Horse, RaceRound, RoundResult } from '@/types';
 import * as raceUtils from '@/utils';
@@ -29,9 +28,6 @@ describe('useRaceStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
-    // The animation engine is a module-level singleton — reset it between
-    // tests so leftover state (pending timers, currentAnimation) doesn't leak.
-    useRaceAnimation().reset();
   });
 
   describe('init', () => {
@@ -96,83 +92,104 @@ describe('useRaceStore', () => {
       expect(store.currentAnimation.every((h) => h.progress === 0)).toBe(true);
       expect(store.currentAnimation.every((h) => h.duration === 0)).toBe(true);
     });
-  });
 
-  describe('status transitions', () => {
-    it('startRace flips scheduled → running', () => {
-      const store = useRaceStore();
-      store.$patch({ horses, schedule, status: 'scheduled' });
-
-      store.startRace();
-
-      expect(store.status).toBe('running');
-    });
-
-    it('startRace is a no-op when not scheduled', () => {
-      const store = useRaceStore();
-      store.$patch({ status: 'idle' });
-
-      store.startRace();
-
-      expect(store.status).toBe('idle');
-    });
-
-    it('pauseRace flips running → paused', () => {
-      const store = useRaceStore();
-      store.$patch({ status: 'running' });
-
-      store.pauseRace();
-
-      expect(store.status).toBe('paused');
-    });
-
-    it('pauseRace is a no-op when not running', () => {
-      const store = useRaceStore();
-      store.$patch({ status: 'scheduled' });
-
-      store.pauseRace();
-
-      expect(store.status).toBe('scheduled');
-    });
-
-    it('resumeRace flips paused → running', () => {
-      const store = useRaceStore();
-      store.$patch({ schedule, status: 'paused' });
-
-      store.resumeRace();
-
-      expect(store.status).toBe('running');
-    });
-
-    it('resumeRace is a no-op when not paused', () => {
-      const store = useRaceStore();
-      store.$patch({ status: 'running' });
-
-      store.resumeRace();
-
-      expect(store.status).toBe('running');
-    });
-  });
-
-  describe('resetRace', () => {
-    it('clears schedule/results/currentRound but keeps horses', () => {
+    it('is a no-op while running (guards against mid-race state corruption)', () => {
+      const generateScheduleSpy = vi.spyOn(raceUtils, 'generateSchedule');
       const store = useRaceStore();
       store.$patch({
         horses,
         schedule,
         results: [firstResult],
+        currentRound: 1,
+        status: 'running',
+      });
+
+      store.createSchedule();
+
+      // Nothing changed — UI already disables the button here, but the
+      // store action must defend itself against programmatic misuse.
+      expect(generateScheduleSpy).not.toHaveBeenCalled();
+      expect(store.schedule).toEqual(schedule);
+      expect(store.results).toEqual([firstResult]);
+      expect(store.currentRound).toBe(1);
+      expect(store.status).toBe('running');
+    });
+
+    it('is allowed from paused — user can abandon a paused race', () => {
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+      const store = useRaceStore();
+      store.$patch({
+        horses,
+        results: [firstResult],
+        currentRound: 1,
+        status: 'paused',
+      });
+
+      store.createSchedule();
+
+      expect(store.results).toEqual([]);
+      expect(store.currentRound).toBe(0);
+      expect(store.status).toBe('scheduled');
+    });
+
+    it('doubles as a reset: clears results and currentRound from any state', () => {
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+
+      const store = useRaceStore();
+      store.$patch({
+        horses,
+        results: [firstResult],
         currentRound: 2,
         status: 'finished',
       });
 
-      store.resetRace();
+      store.createSchedule();
 
-      expect(store.schedule).toEqual([]);
       expect(store.results).toEqual([]);
       expect(store.currentRound).toBe(0);
-      expect(store.status).toBe('idle');
+      expect(store.status).toBe('scheduled');
+      // Horse roster is preserved across regenerations.
       expect(store.horses).toEqual(horses);
-      expect(store.currentAnimation).toEqual([]);
+    });
+  });
+
+  describe('toggleRace — status transitions', () => {
+    it('scheduled → running', () => {
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+      const store = useRaceStore();
+      store.$patch({ horses });
+      store.createSchedule();
+
+      store.toggleRace();
+
+      expect(store.status).toBe('running');
+    });
+
+    it('running → paused', () => {
+      const store = useRaceStore();
+      store.$patch({ status: 'running' });
+
+      store.toggleRace();
+
+      expect(store.status).toBe('paused');
+    });
+
+    it('paused → running', () => {
+      const store = useRaceStore();
+      store.$patch({ horses, schedule, status: 'paused' });
+
+      store.toggleRace();
+
+      expect(store.status).toBe('running');
+    });
+
+    it.each(['idle', 'finished'] as const)('is a no-op in %s state', (status) => {
+      const store = useRaceStore();
+      store.$patch({ status });
+
+      store.toggleRace();
+
+      expect(store.status).toBe(status);
     });
   });
 

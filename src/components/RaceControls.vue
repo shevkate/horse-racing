@@ -6,52 +6,42 @@ import type { RaceStatus } from '@/types';
 
 const raceStore = useRaceStore();
 
+// UI mirrors the spec's two-button layout exactly: one Generate, one
+// Start/Pause toggle. The toggle's label swaps based on current status.
+
 const statusLabels: Record<RaceStatus, string> = {
   idle: 'Ready',
   scheduled: 'Schedule ready',
   running: 'Race in progress',
   paused: 'Paused',
   finished: 'Race finished',
-}
-const statusLabel = computed(() => statusLabels[raceStore.status])
+};
+const statusLabel = computed(() => statusLabels[raceStore.status]);
 
-const buttons = computed(() => [
-  {
-    label: 'Generate',
-    testId: 'btn-generate',
-    active: raceStore.status === 'idle',
-    disabled: raceStore.status === 'running' || raceStore.status === 'paused',
-    handler: raceStore.createSchedule,
-  },
-  {
-    label: 'Start',
-    testId: 'btn-start',
-    active: raceStore.status === 'scheduled',
-    disabled: raceStore.status !== 'scheduled',
-    handler: raceStore.startRace,
-  },
-  {
-    label: 'Pause',
-    testId: 'btn-pause',
-    active: raceStore.status === 'running',
-    disabled: raceStore.status !== 'running',
-    handler: raceStore.pauseRace,
-  },
-  {
-    label: 'Resume',
-    testId: 'btn-resume',
-    active: raceStore.status === 'paused',
-    disabled: raceStore.status !== 'paused',
-    handler: raceStore.resumeRace,
-  },
-  {
-    label: 'Reset',
-    testId: 'btn-reset',
-    active: raceStore.status === 'finished',
-    disabled: false,
-    handler: raceStore.resetRace,
-  },
-])
+// Generate is always available except mid-race — pausing first is fine,
+// since Generate itself resets the in-flight state cleanly via anim.reset().
+const generateDisabled = computed(() => raceStore.status === 'running');
+
+// Toggle label tracks the transition the click would cause:
+//   scheduled/paused → "Start" (idle state for the toggle)
+//   running          → "Pause"
+const toggleLabel = computed(() => (raceStore.status === 'running' ? 'Pause' : 'Start'));
+
+// Disabled when there's nothing to start (no schedule or race over), and
+// mid-round while animating — pause only has an effect between rounds, so
+// we surface that as the button being inert during the animation itself.
+const toggleDisabled = computed(
+  () =>
+    raceStore.status === 'idle' ||
+    raceStore.status === 'finished' ||
+    (raceStore.status === 'running' && raceStore.animating),
+);
+
+// Primary ring highlights the "next expected action" — start after Generate,
+// resume after Pause. Not shown on the Pause label itself.
+const togglePrimary = computed(
+  () => raceStore.status === 'scheduled' || raceStore.status === 'paused',
+);
 </script>
 
 <template>
@@ -63,16 +53,23 @@ const buttons = computed(() => [
 
     <div class="controls__buttons">
       <button
-        v-for="btn in buttons"
-        :key="btn.label"
         type="button"
-        :class="{ primary: btn.active }"
-        :disabled="btn.disabled"
-        :data-testid="btn.testId"
-        :data-active="btn.active || null"
-        @click="btn.handler()"
+        data-testid="btn-generate"
+        :disabled="generateDisabled"
+        @click="raceStore.createSchedule()"
       >
-        {{ btn.label }}
+        Generate
+      </button>
+
+      <button
+        type="button"
+        data-testid="btn-toggle"
+        :data-action="toggleLabel.toLowerCase()"
+        :class="{ primary: togglePrimary }"
+        :disabled="toggleDisabled"
+        @click="raceStore.toggleRace()"
+      >
+        {{ toggleLabel }}
       </button>
     </div>
   </div>

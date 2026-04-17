@@ -26,7 +26,7 @@ describe('RaceSchedule', () => {
     const wrapper = mount(RaceSchedule);
 
     expect(wrapper.text()).toContain('No schedule. Click Generate');
-    expect(wrapper.findAll('.round')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="schedule-round"]')).toHaveLength(0);
   });
 
   it('renders schedule rounds', () => {
@@ -38,7 +38,7 @@ describe('RaceSchedule', () => {
     });
 
     const wrapper = mount(RaceSchedule);
-    const rounds = wrapper.findAll('.round');
+    const rounds = wrapper.findAll('[data-testid="schedule-round"]');
 
     expect(rounds).toHaveLength(2);
     expect(wrapper.text()).toContain('Round 1');
@@ -56,7 +56,7 @@ describe('RaceSchedule', () => {
     });
 
     const wrapper = mount(RaceSchedule);
-    const rounds = wrapper.findAll('.round');
+    const rounds = wrapper.findAll('[data-testid="schedule-round"]');
 
     expect(rounds[0].text()).toContain('Thunderbolt');
     expect(rounds[0].text()).toContain('Silver Wind');
@@ -73,7 +73,7 @@ describe('RaceSchedule', () => {
     });
 
     const wrapper = mount(RaceSchedule);
-    const rounds = wrapper.findAll('.round');
+    const rounds = wrapper.findAll('[data-testid="schedule-round"]');
 
     expect(rounds[0].classes()).toContain('round--done');
     expect(rounds[1].classes()).toContain('round--active');

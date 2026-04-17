@@ -21,6 +21,9 @@ const props = withDefaults(
   },
 );
 
+// `v-html` below is safe here: `svgMarkup` comes exclusively from the
+// build-time `?raw` SVG imports in `@/assets/icons` — no user input or
+// network data ever reaches this sink.
 const svgMarkup = computed(() => ICONS[props.variant]);
 </script>
 

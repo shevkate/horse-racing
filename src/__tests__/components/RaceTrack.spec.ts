@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import RaceTrack from '@/components/RaceTrack.vue';
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
+import { useAnimationStore } from '@/stores/animation';
 import { useRaceStore } from '@/stores/race';
 import type { Horse, RaceRound, RoundResult } from '@/types';
 
@@ -41,13 +41,16 @@ const setupTrack = (options: {
   finishedHorseIds?: number[];
 } = {}) => {
   const store = useRaceStore();
-  const anim = useRaceAnimation();
+  const anim = useAnimationStore();
 
   store.$patch({
     horses,
     schedule,
     status: options.status ?? 'idle',
     results: options.withResult ? [result] : [],
+    // Mirror what `_playLoop` / `createSchedule` would set — the track reads
+    // `displayedRound` (derived) to render its header.
+    displayedRoundNumber: options.withLineup || options.withResult ? round.round : null,
   });
 
   if (options.withLineup) {
@@ -55,11 +58,11 @@ const setupTrack = (options: {
   }
 
   if (options.animating) {
-    anim.animating.value = true;
+    anim.animating = true;
   }
 
   if (options.finishedHorseIds?.length) {
-    anim.currentAnimation.value = anim.currentAnimation.value.map((h) =>
+    anim.currentAnimation = anim.currentAnimation.map((h) =>
       options.finishedHorseIds!.includes(h.horseId) ? { ...h, finished: true } : h,
     );
   }
@@ -70,9 +73,6 @@ const setupTrack = (options: {
 describe('RaceTrack', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
-    // Animation engine is a module-level singleton — reset between tests
-    // so leftover lineup/animating state doesn't leak.
-    useRaceAnimation().reset();
   });
 
   describe('empty state', () => {
@@ -81,7 +81,7 @@ describe('RaceTrack', () => {
       const wrapper = mount(RaceTrack);
 
       expect(wrapper.text()).toContain('Click Generate');
-      expect(wrapper.findAll('.lane')).toHaveLength(0);
+      expect(wrapper.findAll('[data-testid="lane"]')).toHaveLength(0);
     });
 
     it('shows "Preparing track…" hint when non-idle with no lineup', () => {
@@ -106,7 +106,7 @@ describe('RaceTrack', () => {
 
     it('renders one lane per horse in currentAnimation', () => {
       const wrapper = mount(RaceTrack);
-      expect(wrapper.findAll('.lane')).toHaveLength(4);
+      expect(wrapper.findAll('[data-testid="lane"]')).toHaveLength(4);
     });
 
     it('renders lane numbers 1..N in order', () => {
@@ -126,7 +126,7 @@ describe('RaceTrack', () => {
     it('shows badges for top 3 horses when not animating', () => {
       setupTrack({ status: 'paused', withLineup: true, withResult: true });
       const wrapper = mount(RaceTrack);
-      const badges = wrapper.findAll('.lane__badge');
+      const badges = wrapper.findAll('[data-testid="podium-badge"]');
 
       expect(badges).toHaveLength(3);
       expect(badges[0]!.text()).toContain('#1');
@@ -146,7 +146,7 @@ describe('RaceTrack', () => {
       });
       const wrapper = mount(RaceTrack);
 
-      expect(wrapper.findAll('.lane__badge')).toHaveLength(0);
+      expect(wrapper.findAll('[data-testid="podium-badge"]')).toHaveLength(0);
     });
 
     it('applies podium class to top 3 horse icons only', () => {
@@ -198,12 +198,13 @@ describe('RaceTrack', () => {
     });
   });
 
-  describe('activeRound fallback', () => {
-    it('falls back to the last completed round when no lineup is present', () => {
+  describe('header round title', () => {
+    it('shows the displayed round even after the lineup is cleared', () => {
       setupTrack({ status: 'finished', withResult: true });
       const wrapper = mount(RaceTrack);
 
-      // No lineup, but a completed result exists → title shows that round.
+      // No lineup, but `displayedRound` still points at the last round —
+      // the header keeps showing it instead of collapsing to "Awaiting race".
       expect(wrapper.text()).toContain('Round 1');
       expect(wrapper.text()).toContain('1200m');
     });

@@ -12,8 +12,12 @@ export const ANIMATION_TIMINGS = {
    */
   preRollMs: 50,
 
-  /** Pause between rounds before the next one auto-starts. */
-  betweenRoundsMs: 1500,
+  /**
+   * Pause between rounds before the next one auto-starts. Also the window
+   * in which a user's Pause click actually takes effect (mid-round clicks
+   * are deferred until this gap), so it needs to be wide enough to aim at.
+   */
+  betweenRoundsMs: 3000,
 } as const;
 
 export const DURATION = {

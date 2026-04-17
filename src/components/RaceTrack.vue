@@ -2,10 +2,26 @@
 import { computed } from 'vue';
 
 import HorseIcon from '@/components/HorseIcon.vue';
+import { useAnimationStore } from '@/stores/animation';
 import { useRaceStore } from '@/stores/race';
 import type { RoundResult } from '@/types';
 
 const raceStore = useRaceStore();
+const animationStore = useAnimationStore();
+
+/**
+ * Mark a horse as finished the moment its `left` CSS transition ends.
+ * Transitions on other properties (e.g. future `transform`) are ignored so
+ * we don't flip `finished` while the horse is still visibly sliding. The
+ * animation store also runs a JS-timer fallback, so if the event is dropped
+ * (tab backgrounded, element unmounted) the round still completes — this
+ * handler just keeps visual and data state tightly synchronised on the
+ * happy path.
+ */
+const onHorseTransitionEnd = (event: TransitionEvent, horseId: number): void => {
+  if (event.propertyName !== 'left') return;
+  animationStore.markHorseFinished(horseId);
+};
 
 type ResultItem = RoundResult['items'][number];
 
@@ -83,6 +99,7 @@ const activeRound = computed(() => raceStore.displayedRound);
               transitionDuration: `${lane.duration}s`,
             }"
             :label="lane.name"
+            @transitionend="(event: TransitionEvent) => onHorseTransitionEnd(event, lane.horseId)"
           />
           <span
             v-if="lane.podiumPosition !== null"

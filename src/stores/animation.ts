@@ -131,6 +131,8 @@ export const useAnimationStore = defineStore('animation', () => {
       entry.resolve(false); // unblock awaiters so downstream cleanup can run
     }
     pendingTimers.clear();
+    for (const resolver of pendingFinishes.values()) resolver();
+    pendingFinishes.clear();
     generation += 1; // invalidate any async work that survives the clear
     currentAnimation.value = [];
     animating.value = false;
@@ -139,6 +141,31 @@ export const useAnimationStore = defineStore('animation', () => {
   /** Static preview — place horses at the start line without animating. */
   const showLineup = (round: RaceRound, horses: Horse[]): void => {
     currentAnimation.value = buildLineup(round, horses);
+  };
+
+  // Per-horse finish resolvers for the currently-playing round. Populated by
+  // `playRound` before the transition kicks off; drained by `markHorseFinished`
+  // whichever path (DOM `transitionend` or JS timer fallback) observes the
+  // finish first. Cleared on reset() so a cancelled round doesn't leak refs
+  // into the next one.
+  const pendingFinishes = new Map<HorseId, () => void>();
+
+  /**
+   * Flip a horse's `finished` flag and release any awaiter in `playRound`.
+   * Idempotent: safe to call from both the `transitionend` listener in
+   * `RaceTrack.vue` and the JS timer fallback — the first caller wins, the
+   * second is a no-op. This is what makes the visual state (horse at the
+   * finish line) and the data state (`finished: true`, podium badge) stay
+   * in lockstep instead of drifting under main-thread contention.
+   */
+  const markHorseFinished = (horseId: HorseId): void => {
+    const resolver = pendingFinishes.get(horseId);
+    if (!resolver) return;
+    pendingFinishes.delete(horseId);
+    currentAnimation.value = currentAnimation.value.map((h) =>
+      h.horseId === horseId ? { ...h, finished: true } : h,
+    );
+    resolver();
   };
 
   /**
@@ -178,15 +205,26 @@ export const useAnimationStore = defineStore('animation', () => {
       duration: durations.get(h.horseId)!,
     }));
 
-    // Flip `finished` on each horse exactly when its CSS transition ends.
+    // Wait for each horse to be observed crossing the finish line. The
+    // primary signal is the DOM `transitionend` event (wired up from
+    // `RaceTrack.vue`) which calls `markHorseFinished`; a JS timer with a
+    // small grace window acts as a fallback in case the event is dropped
+    // (tab backgrounded, element unmounted mid-transition, browser bug).
+    // Whichever path observes the finish first settles the per-horse
+    // resolver below; the other path is a no-op.
+    const TRANSITIONEND_GRACE_MS = 150;
     await Promise.all(
       currentAnimation.value.map(async (horse) => {
         const duration = durations.get(horse.horseId)!;
-        if (!(await wait(duration * 1000)) || isStale()) return;
-
-        currentAnimation.value = currentAnimation.value.map((h) =>
-          h.horseId === horse.horseId ? { ...h, finished: true } : h,
-        );
+        const finished = new Promise<void>((resolve) => {
+          pendingFinishes.set(horse.horseId, resolve);
+        });
+        void wait(duration * 1000 + TRANSITIONEND_GRACE_MS).then((completed) => {
+          if (!completed || isStale()) return;
+          markHorseFinished(horse.horseId);
+        });
+        await finished;
+        if (isStale()) return;
       }),
     );
 
@@ -204,5 +242,6 @@ export const useAnimationStore = defineStore('animation', () => {
     playRound,
     reset,
     wait,
+    markHorseFinished,
   };
 });

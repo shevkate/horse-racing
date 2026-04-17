@@ -14,10 +14,13 @@ const round: RaceRound = { round: 1, distance: 1200, horseIds: [1, 2] };
 
 // Base transition length for this round — longest lane finishes at
 // base * (1 + lastPlaceSlowdown). Computed once so assertions don't drift
-// if tunables change.
+// if tunables change. The extra 200ms covers the JS-timer fallback grace
+// window that fires when `transitionend` is never observed (happy-dom
+// doesn't run real CSS transitions, so the fallback is the only signal
+// under test).
 const baseMs = (round.distance / DURATION.metersPerSecond) * 1000;
 const slowestMs = baseMs * (1 + DURATION.lastPlaceSlowdown);
-const fullRoundMs = ANIMATION_TIMINGS.preRollMs + slowestMs;
+const fullRoundMs = ANIMATION_TIMINGS.preRollMs + slowestMs + 200;
 
 describe('useAnimationStore', () => {
   beforeEach(() => {

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-import { ANIMATION_TIMINGS, DURATION } from '@/constants/animation';
+import { DURATION } from '@/constants/animation';
 import type { Horse, HorseId, RaceRound, RoundResult, RoundResultItem } from '@/types';
 import { resolveRoundHorses } from '@/utils/resolveRoundHorses';
 import { runRound } from '@/utils/runRound';
@@ -112,6 +112,34 @@ export const useAnimationStore = defineStore('animation', () => {
   let generation = 0;
 
   /**
+   * Yield until after the next browser paint. Used before flipping a horse's
+   * `progress` from 0 to 100: the browser needs to have painted the
+   * start-line position first, otherwise it coalesces the two style
+   * assignments into one frame and the CSS transition is skipped entirely.
+   *
+   * Double-`requestAnimationFrame` is the robust idiom for "wait for a
+   * paint": the first rAF fires *before* the next paint, the second fires
+   * *after* it. A fixed setTimeout used to do this job, but any value
+   * low enough to feel snappy (50ms) was a gamble on slower devices where
+   * a single frame can exceed that; any value high enough to be safe felt
+   * laggy. rAF self-adjusts to the device's frame budget.
+   *
+   * Not tracked in `pendingTimers` — rAF handles don't leak through
+   * clearTimeout anyway, and the generation check at the caller handles
+   * the cancellation case.
+   */
+  const nextPaint = (): Promise<boolean> => {
+    const snapshot = generation;
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve(snapshot === generation);
+        });
+      });
+    });
+  };
+
+  /**
    * Cancellable sleep. Resolves to `true` if it elapsed normally and to
    * `false` if `reset()` cancelled it. Callers use the boolean to decide
    * whether to keep mutating state — the generation counter is still the
@@ -196,9 +224,11 @@ export const useAnimationStore = defineStore('animation', () => {
     currentAnimation.value = buildLineup(round, horses);
     animating.value = true;
 
-    // Let the DOM paint progress=0 before we flip to 100 (otherwise the CSS
-    // transition is skipped because the browser collapses same-frame changes).
-    if (!(await wait(ANIMATION_TIMINGS.preRollMs)) || isStale()) {
+    // Wait for the browser to paint progress=0 before flipping to 100;
+    // without this gap the two style updates land in the same frame and
+    // the CSS transition is skipped entirely. See `nextPaint` for why
+    // double-rAF replaced the old fixed 50ms setTimeout.
+    if (!(await nextPaint()) || isStale()) {
       animating.value = false;
       return null;
     }

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
-import { ANIMATION_TIMINGS, DURATION } from '@/constants/animation';
+import { DURATION } from '@/constants/animation';
 import { useAnimationStore } from '@/stores/animation';
 import type { Horse, RaceRound } from '@/types';
 
@@ -17,10 +17,12 @@ const round: RaceRound = { round: 1, distance: 1200, horseIds: [1, 2] };
 // if tunables change. The extra 200ms covers the JS-timer fallback grace
 // window that fires when `transitionend` is never observed (happy-dom
 // doesn't run real CSS transitions, so the fallback is the only signal
-// under test).
+// under test). `nextPaint` is double-rAF; vi's fake timers mock rAF at
+// ~16ms per frame, so advancing by `fullRoundMs` is plenty to flush both
+// rAF callbacks plus the transition duration.
 const baseMs = (round.distance / DURATION.metersPerSecond) * 1000;
 const slowestMs = baseMs * (1 + DURATION.lastPlaceSlowdown);
-const fullRoundMs = ANIMATION_TIMINGS.preRollMs + slowestMs + 200;
+const fullRoundMs = slowestMs + 200;
 
 describe('useAnimationStore', () => {
   beforeEach(() => {
@@ -109,7 +111,9 @@ describe('useAnimationStore', () => {
 
       // Abort partway through the first round.
       void engine.playRound(round, horses);
-      await vi.advanceTimersByTimeAsync(ANIMATION_TIMINGS.preRollMs + 100);
+      // Flush a couple of rAF frames (nextPaint) plus a bit of the
+      // transition, then reset mid-round.
+      await vi.advanceTimersByTimeAsync(100);
       engine.reset();
 
       // State is wiped immediately.

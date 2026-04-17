@@ -32,18 +32,13 @@ const laneData = computed(() =>
   }),
 );
 
-/** Round currently animating; falls back to the last completed round when idle. */
-const activeRound = computed(() => {
-  const animRound = raceStore.currentAnimation.at(0)?.round;
-  if (animRound != null) {
-    return raceStore.schedule.find((r) => r.round === animRound) ?? null;
-  }
-  const last = lastResult.value;
-  if (last) {
-    return raceStore.schedule.find((r) => r.round === last.round) ?? null;
-  }
-  return null;
-});
+/**
+ * Round shown in the header. The store maintains `displayedRound` as
+ * explicit state (set by `createSchedule` for the preview and bumped by
+ * `_playLoop` each tick), so the component doesn't have to reconstruct it
+ * from the animation lineup + lastResult fallback.
+ */
+const activeRound = computed(() => raceStore.displayedRound);
 </script>
 
 <template>

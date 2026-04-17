@@ -48,6 +48,9 @@ const setupTrack = (options: {
     schedule,
     status: options.status ?? 'idle',
     results: options.withResult ? [result] : [],
+    // Mirror what `_playLoop` / `createSchedule` would set — the track reads
+    // `displayedRound` (derived) to render its header.
+    displayedRoundNumber: options.withLineup || options.withResult ? round.round : null,
   });
 
   if (options.withLineup) {
@@ -195,12 +198,13 @@ describe('RaceTrack', () => {
     });
   });
 
-  describe('activeRound fallback', () => {
-    it('falls back to the last completed round when no lineup is present', () => {
+  describe('header round title', () => {
+    it('shows the displayed round even after the lineup is cleared', () => {
       setupTrack({ status: 'finished', withResult: true });
       const wrapper = mount(RaceTrack);
 
-      // No lineup, but a completed result exists → title shows that round.
+      // No lineup, but `displayedRound` still points at the last round —
+      // the header keeps showing it instead of collapsing to "Awaiting race".
       expect(wrapper.text()).toContain('Round 1');
       expect(wrapper.text()).toContain('1200m');
     });

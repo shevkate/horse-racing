@@ -20,10 +20,23 @@ export const useRaceStore = defineStore('race', () => {
   const results = ref<RoundResult[]>([]);
   const currentRound = ref(0);
   const status = ref<RaceStatus>('idle');
+  /**
+   * Round number (1-indexed) currently shown on the track — set explicitly
+   * by `createSchedule` (preview) and by `_playLoop` (per round). Decouples
+   * the "what's on screen" question from the `currentRound`/animation state
+   * so `RaceTrack` can resolve the active round with a single lookup instead
+   * of a lineup-then-lastResult fallback chain.
+   */
+  const displayedRoundNumber = ref<number | null>(null);
 
   const horseNameById = computed(
     () => new Map(horses.value.map((horse) => [horse.id, horse.name])),
   );
+
+  const displayedRound = computed<RaceRound | null>(() => {
+    if (displayedRoundNumber.value == null) return null;
+    return schedule.value.find((r) => r.round === displayedRoundNumber.value) ?? null;
+  });
 
   // ---- Internal: auto-advance loop --------------------------------------
   //
@@ -44,6 +57,8 @@ export const useRaceStore = defineStore('race', () => {
       while (currentRound.value < schedule.value.length && status.value === 'running') {
         const round = schedule.value[currentRound.value];
         if (!round) break;
+
+        displayedRoundNumber.value = round.round;
 
         const result = await anim.playRound(round, horses.value);
         // Aborted (reset) — state is already cleaned up elsewhere.
@@ -81,6 +96,7 @@ export const useRaceStore = defineStore('race', () => {
     schedule.value = [];
     results.value = [];
     currentRound.value = 0;
+    displayedRoundNumber.value = null;
     status.value = 'idle';
   };
 
@@ -109,6 +125,7 @@ export const useRaceStore = defineStore('race', () => {
     status.value = 'scheduled';
 
     const firstRound = schedule.value[0];
+    displayedRoundNumber.value = firstRound?.round ?? null;
     if (firstRound) anim.showLineup(firstRound, horses.value);
   };
 
@@ -142,7 +159,9 @@ export const useRaceStore = defineStore('race', () => {
     results,
     currentRound,
     status,
+    displayedRoundNumber,
     horseNameById,
+    displayedRound,
     // Animation state — re-exported so existing consumers (RaceTrack etc.)
     // don't need to import the animation store separately. Components that
     // care only about animation can call `useAnimationStore()` directly.

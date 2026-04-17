@@ -3,18 +3,20 @@ import type { Horse, RaceRound, RoundResult, RoundResultItem } from '@/types';
 import { resolveRoundHorses } from './resolveRoundHorses';
 
 /**
- * Race score = condition [1..100] + random [0..100].
+ * Race score = condition [1..100] + random [0..RANDOM_SPREAD].
  *
- * Condition contributes up to 50% of the ceiling, so it biases outcomes
- * without making them deterministic — a condition-95 horse almost always
- * beats a condition-30 horse, but a condition-30 horse sometimes wins
- * against condition-60. That randomness is intentional: without it every
- * race would have the same winner and the app would lose any dramatic
- * tension. The assessment spec is silent on the formula, so this is a
- * design choice worth flagging rather than a bug.
+ * RANDOM_SPREAD=60 keeps condition dominant (a 95 horse always beats a 30
+ * horse — their score ranges don't overlap at all) while still allowing
+ * upsets between horses within ~60 points of each other. The previous
+ * spread of 100 let condition-30 beat condition-95 whenever their rolls
+ * were at opposite ends of the distribution, which looked broken under
+ * repeated play. The assessment spec is silent on the formula, so this
+ * is a design choice rather than a requirement.
  */
+const RANDOM_SPREAD = 60;
+
 const calculateScore = (horse: Horse): number => {
-  return horse.condition + Math.random() * 100;
+  return horse.condition + Math.random() * RANDOM_SPREAD;
 };
 
 export const runRound = (round: RaceRound, horses: Horse[]): RoundResult => {

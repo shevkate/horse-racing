@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 import { ANIMATION_TIMINGS, DURATION } from '@/constants/animation';
 import type { Horse, HorseId, RaceRound, RoundResult, RoundResultItem } from '@/types';
+import { resolveRoundHorses } from '@/utils/resolveRoundHorses';
 import { runRound } from '@/utils/runRound';
 
 // ---------------------------------------------------------------------------
@@ -47,22 +48,23 @@ const computeDurations = (
   );
 };
 
+// Must resolve through `resolveRoundHorses` — the same helper `runRound` uses —
+// so the visual lineup and the result set iterate the exact same horses. Using
+// `round.horseIds` directly here would re-open the "ghost lane" bug: an id
+// that doesn't map to a known horse would appear on the track (with a
+// placeholder color/name) but never show up in `RoundResult.items`, because
+// `runRound` silently drops it.
 const buildLineup = (round: RaceRound, horses: Horse[]): HorseAnimation[] => {
-  const byId = new Map(horses.map((h) => [h.id, h]));
-
-  return round.horseIds.map((horseId, index) => {
-    const horse = byId.get(horseId);
-    return {
-      round: round.round,
-      horseId,
-      color: horse?.color ?? '#888',
-      name: horse?.name ?? '',
-      lane: index + 1,
-      progress: 0,
-      duration: 0,
-      finished: false,
-    };
-  });
+  return resolveRoundHorses(round, horses).map((horse, index) => ({
+    round: round.round,
+    horseId: horse.id,
+    color: horse.color,
+    name: horse.name,
+    lane: index + 1,
+    progress: 0,
+    duration: 0,
+    finished: false,
+  }));
 };
 
 // ---------------------------------------------------------------------------
@@ -150,16 +152,19 @@ export const useAnimationStore = defineStore('animation', () => {
       return null;
     }
 
+    // `buildLineup` and `runRound` now iterate the same resolved horse set
+    // (via `resolveRoundHorses`), so every lane horseId has a matching
+    // entry in `durations`. The `!` assertions document that invariant.
     currentAnimation.value = currentAnimation.value.map((h) => ({
       ...h,
       progress: 100,
-      duration: durations.get(h.horseId) ?? baseDuration(round.distance),
+      duration: durations.get(h.horseId)!,
     }));
 
     // Flip `finished` on each horse exactly when its CSS transition ends.
     await Promise.all(
       currentAnimation.value.map(async (horse) => {
-        const duration = durations.get(horse.horseId) ?? baseDuration(round.distance);
+        const duration = durations.get(horse.horseId)!;
         if (!(await wait(duration * 1000)) || isStale()) return;
 
         currentAnimation.value = currentAnimation.value.map((h) =>

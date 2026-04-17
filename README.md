@@ -1,5 +1,7 @@
 # Horse Racing Game
 
+**🐎 Live demo:** [shevkate.github.io/horse-racing](https://shevkate.github.io/horse-racing/)
+
 A browser-based horse racing simulator. Twenty horses compete across a
 randomly generated six-round schedule; each horse rides in ten rounds.
 Round winners are chosen by a condition-weighted score and visualised as
@@ -147,3 +149,6 @@ GitHub Actions runs two parallel jobs on every PR to `main`:
   [`cypress-io/github-action`](https://github.com/cypress-io/github-action).
 
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+A third workflow ([`deploy.yml`](.github/workflows/deploy.yml)) publishes
+the built bundle to GitHub Pages on every push to `main`.

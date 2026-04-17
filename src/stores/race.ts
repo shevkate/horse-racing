@@ -11,6 +11,15 @@ export const useRaceStore = defineStore('race', () => {
   // `storeToRefs` preserves reactivity when re-exporting pieces of another
   // store — `anim.currentAnimation` on its own is already unwrapped, which
   // would drop reactivity when we return it below.
+  //
+  // IMPORTANT: these are READ-ONLY re-exports. Consumers MUST NOT write to
+  // `raceStore.currentAnimation` / `raceStore.animating` — the refs belong
+  // to the animation store, so mutations would bypass that store's own
+  // invariants (generation counter, pendingFinishes lifecycle). If you
+  // need to mutate animation state, go through `useAnimationStore()`
+  // directly. The re-export exists only so components don't need to
+  // import both stores just to read the animation state they already see
+  // via the race store.
   const { currentAnimation, animating } = storeToRefs(anim);
 
   // ---- Domain state ------------------------------------------------------

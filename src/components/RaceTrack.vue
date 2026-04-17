@@ -1,28 +1,48 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import HorseIcon from '@/components/HorseIcon.vue';
 import { useRaceStore } from '@/stores/race';
+import type { RoundResult } from '@/types';
 
 const raceStore = useRaceStore();
 
-const activeRound = computed(() => {
-  const index = raceStore.currentRound;
-  return raceStore.schedule[index] ?? raceStore.schedule[index - 1] ?? null;
+type ResultItem = RoundResult['items'][number];
+
+const lastResult = computed(() => raceStore.results.at(-1));
+
+const resultByHorseId = computed(() => {
+  const map = new Map<number, ResultItem>();
+  lastResult.value?.items.forEach((item) => map.set(item.horseId, item));
+  return map;
 });
 
-const lanes = computed(() => {
-  if (!activeRound.value) return [];
+/**
+ * Enriches each animated horse with its podium position (1–3) once the round
+ * is over. A single computed means the template never calls a lookup twice
+ * per horse and keeps TypeScript happy without non-null assertions.
+ */
+const laneData = computed(() =>
+  raceStore.currentAnimation.map((horse) => {
+    const result = resultByHorseId.value.get(horse.horseId);
+    const podiumPosition =
+      !raceStore.animating && result && result.position <= 3 ? result.position : null;
 
-  return activeRound.value.horseIds.map((horseId, index) => {
-    const horse = raceStore.horses.find((item) => item.id === horseId);
+    return { ...horse, podiumPosition };
+  }),
+);
 
-    return {
-      lane: index + 1,
-      horseId,
-      name: horse?.name ?? '',
-      color: horse?.color ?? '#888',
-    };
-  });
+/** Round currently animating; falls back to the last completed round when idle. */
+const activeRound = computed(() => {
+  const animRound = raceStore.currentAnimation.at(0)?.round;
+  if (animRound != null) {
+    return raceStore.schedule.find((r) => r.round === animRound) ?? null;
+  }
+  const last = lastResult.value;
+  if (last) {
+    return raceStore.schedule.find((r) => r.round === last.round) ?? null;
+  }
+  return null;
 });
 </script>
 
@@ -30,21 +50,42 @@ const lanes = computed(() => {
   <section class="track">
     <header class="track__header">
       <h2 class="track__title">
-        <span v-if="activeRound">
-          Round {{ activeRound.round }} — {{ activeRound.distance }}m
-        </span>
+        <span v-if="activeRound">Round {{ activeRound.round }} — {{ activeRound.distance }}m</span>
         <span v-else class="track__title--muted">Awaiting race</span>
       </h2>
     </header>
 
     <div class="track__lanes">
-      <div v-if="lanes.length === 0" class="track__empty">Generate a schedule to see the track</div>
+      <div v-if="laneData.length === 0" class="track__empty">
+        {{ raceStore.status === 'idle' ? 'Click Generate to load horses' : 'Preparing track…' }}
+      </div>
 
-      <div v-for="lane in lanes" :key="lane.horseId" class="lane">
+      <div v-for="lane in laneData" :key="`${lane.round}-${lane.horseId}`" class="lane">
         <span class="lane__number">{{ lane.lane }}</span>
 
         <div class="lane__strip">
-          <span class="lane__horse" :style="{ backgroundColor: lane.color }" :title="lane.name" />
+          <HorseIcon
+            :class="[
+              'lane__horse',
+              {
+                'lane__horse--running': raceStore.animating && !lane.finished,
+                'lane__horse--podium': lane.podiumPosition !== null,
+              },
+            ]"
+            :color="lane.color"
+            :style="{
+              left:
+                lane.progress === 100
+                  ? 'calc(100% - var(--horse-size) - var(--lane-pad))'
+                  : 'var(--lane-pad)',
+              transitionDuration: `${lane.duration}s`,
+            }"
+            :label="lane.name"
+          />
+          <span v-if="lane.podiumPosition !== null" class="lane__badge">
+            <span>#{{ lane.podiumPosition }}</span>
+            {{ lane.name }}
+          </span>
         </div>
 
         <span class="lane__finish" aria-hidden="true" />
@@ -83,7 +124,7 @@ const lanes = computed(() => {
 .track__lanes {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-xs, 6px);
   flex: 1;
 }
 
@@ -110,9 +151,15 @@ const lanes = computed(() => {
   text-align: center;
 }
 
+/* single source of truth for all horse geometry.
+   Change --horse-size here and the lane, the icon, and the finish offset
+   (calc in inline style) all stay in sync! */
 .lane__strip {
+  --horse-size: 52px;
+  --lane-pad: 4px;
+
   position: relative;
-  height: 32px;
+  height: var(--horse-size);
   background: repeating-linear-gradient(
     90deg,
     var(--track-lane) 0 20px,
@@ -120,18 +167,51 @@ const lanes = computed(() => {
   );
   border-radius: var(--radius-sm);
   overflow: hidden;
+
+  display: flex;
 }
 
 .lane__horse {
   position: absolute;
   top: 50%;
-  left: 8px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid rgba(0, 0, 0, 0.3);
+  left: var(--lane-pad);
+  width: var(--horse-size);
+  height: var(--horse-size);
   transform: translateY(-50%);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition-property: left;
+  transition-timing-function: linear;
+  will-change: left;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes horse-run-bounce {
+  0%,
+  100% {
+    transform: translateY(-50%) translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-50%) translateY(-3px) rotate(-2deg);
+  }
+}
+
+.lane__horse--running {
+  animation: horse-run-bounce 0.35s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.lane__horse--podium {
+  filter: drop-shadow(0 0 10px var(--accent));
+}
+
+.lane__badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: var(--space-sm);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .lane__finish {

@@ -5,8 +5,10 @@ const calculateScore = (horse: Horse): number => {
 };
 
 export const runRound = (round: RaceRound, horses: Horse[]): RoundResult => {
+  // Build an id→horse lookup once instead of doing an O(n) `find` per participant.
+  const byId = new Map(horses.map((horse) => [horse.id, horse]));
   const selectedHorses = round.horseIds
-    .map((horseId) => horses.find((horse) => horse.id === horseId))
+    .map((horseId) => byId.get(horseId))
     .filter((horse): horse is Horse => Boolean(horse));
 
   const items: RoundResultItem[] = selectedHorses

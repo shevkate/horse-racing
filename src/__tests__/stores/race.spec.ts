@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
+import { useRaceAnimation } from '@/composables/useRaceAnimation';
 import { useRaceStore } from '@/stores/race';
-import * as raceUtils from '@/utils';
-import * as roundUtils from '@/utils/runRound';
 import type { Horse, RaceRound, RoundResult } from '@/types';
+import * as raceUtils from '@/utils';
 
 describe('useRaceStore', () => {
   const horses: Horse[] = [
@@ -26,148 +26,164 @@ describe('useRaceStore', () => {
     ],
   };
 
-  const secondResult: RoundResult = {
-    round: 2,
-    distance: 1400,
-    items: [
-      { horseId: 2, position: 1, score: 90 },
-      { horseId: 1, position: 2, score: 85 },
-    ],
-  };
-
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
+    // The animation engine is a module-level singleton — reset it between
+    // tests so leftover state (pending timers, currentAnimation) doesn't leak.
+    useRaceAnimation().reset();
   });
 
-  it('init generates horses and resets race state', () => {
-    vi.spyOn(raceUtils, 'generateHorses').mockReturnValue(horses);
+  describe('init', () => {
+    it('generates horses and resets race state', () => {
+      vi.spyOn(raceUtils, 'generateHorses').mockReturnValue(horses);
 
-    const store = useRaceStore();
+      const store = useRaceStore();
+      store.$patch({
+        schedule,
+        results: [firstResult],
+        currentRound: 1,
+        status: 'running',
+      });
 
-    store.schedule = schedule;
-    store.results = [firstResult];
-    store.currentRound = 1;
-    store.status = 'running';
+      store.init();
 
-    store.init();
-
-    expect(store.horses).toEqual(horses);
-    expect(store.schedule).toEqual([]);
-    expect(store.results).toEqual([]);
-    expect(store.currentRound).toBe(0);
-    expect(store.status).toBe('idle');
+      expect(store.horses).toEqual(horses);
+      expect(store.schedule).toEqual([]);
+      expect(store.results).toEqual([]);
+      expect(store.currentRound).toBe(0);
+      expect(store.status).toBe('idle');
+    });
   });
 
-  it('createSchedule generates horses when horses list is empty', () => {
-    vi.spyOn(raceUtils, 'generateHorses').mockReturnValue(horses);
-    vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+  describe('createSchedule', () => {
+    it('generates horses when the list is empty', () => {
+      vi.spyOn(raceUtils, 'generateHorses').mockReturnValue(horses);
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
 
-    const store = useRaceStore();
+      const store = useRaceStore();
+      store.createSchedule();
 
-    store.createSchedule();
+      expect(raceUtils.generateHorses).toHaveBeenCalled();
+      expect(raceUtils.generateSchedule).toHaveBeenCalledWith(horses);
+      expect(store.horses).toEqual(horses);
+      expect(store.schedule).toEqual(schedule);
+      expect(store.status).toBe('scheduled');
+    });
 
-    expect(raceUtils.generateHorses).toHaveBeenCalled();
-    expect(raceUtils.generateSchedule).toHaveBeenCalledWith(horses);
-    expect(store.horses).toEqual(horses);
-    expect(store.schedule).toEqual(schedule);
-    expect(store.results).toEqual([]);
-    expect(store.currentRound).toBe(0);
-    expect(store.status).toBe('scheduled');
+    it('reuses existing horses without regenerating', () => {
+      const genHorsesSpy = vi.spyOn(raceUtils, 'generateHorses');
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+
+      const store = useRaceStore();
+      store.$patch({ horses });
+
+      store.createSchedule();
+
+      expect(genHorsesSpy).not.toHaveBeenCalled();
+      expect(store.schedule).toEqual(schedule);
+      expect(store.status).toBe('scheduled');
+    });
+
+    it('shows round 1 lineup as a static preview (progress=0, duration=0)', () => {
+      vi.spyOn(raceUtils, 'generateHorses').mockReturnValue(horses);
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+
+      const store = useRaceStore();
+      store.createSchedule();
+
+      expect(store.currentAnimation).toHaveLength(2);
+      expect(store.currentAnimation.every((h) => h.progress === 0)).toBe(true);
+      expect(store.currentAnimation.every((h) => h.duration === 0)).toBe(true);
+    });
   });
 
-  it('createSchedule reuses existing horses', () => {
-    vi.spyOn(raceUtils, 'generateHorses');
-    vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+  describe('status transitions', () => {
+    it('startRace flips scheduled → running', () => {
+      const store = useRaceStore();
+      store.$patch({ horses, schedule, status: 'scheduled' });
 
-    const store = useRaceStore();
-    store.horses = horses;
+      store.startRace();
 
-    store.createSchedule();
+      expect(store.status).toBe('running');
+    });
 
-    expect(store.schedule).toEqual(schedule);
-    expect(store.status).toBe('scheduled');
-    expect(raceUtils.generateHorses).not.toHaveBeenCalled();
+    it('startRace is a no-op when not scheduled', () => {
+      const store = useRaceStore();
+      store.$patch({ status: 'idle' });
+
+      store.startRace();
+
+      expect(store.status).toBe('idle');
+    });
+
+    it('pauseRace flips running → paused', () => {
+      const store = useRaceStore();
+      store.$patch({ status: 'running' });
+
+      store.pauseRace();
+
+      expect(store.status).toBe('paused');
+    });
+
+    it('pauseRace is a no-op when not running', () => {
+      const store = useRaceStore();
+      store.$patch({ status: 'scheduled' });
+
+      store.pauseRace();
+
+      expect(store.status).toBe('scheduled');
+    });
+
+    it('resumeRace flips paused → running', () => {
+      const store = useRaceStore();
+      store.$patch({ schedule, status: 'paused' });
+
+      store.resumeRace();
+
+      expect(store.status).toBe('running');
+    });
+
+    it('resumeRace is a no-op when not paused', () => {
+      const store = useRaceStore();
+      store.$patch({ status: 'running' });
+
+      store.resumeRace();
+
+      expect(store.status).toBe('running');
+    });
   });
 
-  it('startRace switches status to running when schedule exists', () => {
-    const store = useRaceStore();
-    store.schedule = schedule;
-    store.status = 'scheduled';
-    store.startRace();
+  describe('resetRace', () => {
+    it('clears schedule/results/currentRound but keeps horses', () => {
+      const store = useRaceStore();
+      store.$patch({
+        horses,
+        schedule,
+        results: [firstResult],
+        currentRound: 2,
+        status: 'finished',
+      });
 
-    expect(store.status).toBe('running');
+      store.resetRace();
+
+      expect(store.schedule).toEqual([]);
+      expect(store.results).toEqual([]);
+      expect(store.currentRound).toBe(0);
+      expect(store.status).toBe('idle');
+      expect(store.horses).toEqual(horses);
+      expect(store.currentAnimation).toEqual([]);
+    });
   });
 
-  it('startRace does nothing when schedule is empty', () => {
-    const store = useRaceStore();
+  describe('horseNameById', () => {
+    it('maps each horse id to its name', () => {
+      const store = useRaceStore();
+      store.$patch({ horses });
 
-    store.startRace();
-
-    expect(store.status).toBe('idle');
-  });
-
-  it('runNextRound appends result and increments current round', () => {
-    vi.spyOn(roundUtils, 'runRound').mockReturnValue(firstResult);
-
-    const store = useRaceStore();
-    store.horses = horses;
-    store.schedule = schedule;
-    store.status = 'running';
-
-    const result = store.runNextRound();
-
-    expect(roundUtils.runRound).toHaveBeenCalledWith(schedule[0], horses);
-    expect(result).toEqual(firstResult);
-    expect(store.results).toEqual([firstResult]);
-    expect(store.currentRound).toBe(1);
-    expect(store.status).toBe('running');
-  });
-
-  it('runNextRound marks race as finished after the last round', () => {
-    vi.spyOn(roundUtils, 'runRound').mockReturnValue(secondResult);
-
-    const store = useRaceStore();
-    store.horses = horses;
-    store.schedule = schedule;
-    store.currentRound = 1;
-    store.status = 'running';
-
-    const result = store.runNextRound();
-
-    expect(result).toEqual(secondResult);
-    expect(store.results).toEqual([secondResult]);
-    expect(store.currentRound).toBe(2);
-    expect(store.status).toBe('finished');
-  });
-
-  it('runNextRound returns null when all rounds are completed', () => {
-    const store = useRaceStore();
-    store.schedule = schedule;
-    store.currentRound = schedule.length;
-    store.status = 'running';
-
-    const result = store.runNextRound();
-
-    expect(result).toBeNull();
-    expect(store.status).toBe('finished');
-  });
-
-  it('resetRace clears schedule results and current progress', () => {
-    const store = useRaceStore();
-
-    store.horses = horses;
-    store.schedule = schedule;
-    store.results = [firstResult, secondResult];
-    store.currentRound = 2;
-    store.status = 'finished';
-
-    store.resetRace();
-
-    expect(store.schedule).toEqual([]);
-    expect(store.results).toEqual([]);
-    expect(store.currentRound).toBe(0);
-    expect(store.status).toBe('idle');
-    expect(store.horses).toEqual(horses);
+      expect(store.horseNameById.get(1)).toBe('Horse 1');
+      expect(store.horseNameById.get(2)).toBe('Horse 2');
+      expect(store.horseNameById.get(999)).toBeUndefined();
+    });
   });
 });

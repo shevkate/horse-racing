@@ -14,32 +14,32 @@ const statusLabels: Record<RaceStatus, string> = {
 };
 const statusLabel = computed(() => statusLabels[raceStore.status]);
 
-const isGenerateDisabled = computed(() => raceStore.status === 'running');
-const isStartDisabled = computed(() => raceStore.status !== 'scheduled');
-const isNextRoundDisabled = computed(
-  () =>
-    raceStore.status === 'idle' ||
-    raceStore.status === 'finished' ||
-    raceStore.schedule.length === 0,
-);
-
-const primaryAction = computed<RaceStatus>(() => raceStore.status);
-
-const handleGenerate = (): void => {
-  raceStore.createSchedule();
-};
-
-const handleStart = (): void => {
-  raceStore.startRace();
-};
-
-const handleNextRound = (): void => {
-  raceStore.runNextRound();
-};
-
-const handleReset = (): void => {
-  raceStore.resetRace();
-};
+const buttons = computed(() => [
+  {
+    label: 'Generate',
+    active: raceStore.status === 'idle',
+    disabled: raceStore.status === 'running',
+    handler: raceStore.createSchedule,
+  },
+  {
+    label: 'Start',
+    active: raceStore.status === 'scheduled',
+    disabled: raceStore.status !== 'scheduled',
+    handler: raceStore.startRace,
+  },
+  {
+    label: 'Next round',
+    active: raceStore.status === 'running',
+    disabled: raceStore.status !== 'running',
+    handler: raceStore.runNextRound,
+  },
+  {
+    label: 'Reset',
+    active: raceStore.status === 'finished',
+    disabled: false,
+    handler: raceStore.resetRace,
+  },
+]);
 </script>
 
 <template>
@@ -51,38 +51,14 @@ const handleReset = (): void => {
 
     <div class="controls__buttons">
       <button
+        v-for="btn in buttons"
+        :key="btn.label"
         type="button"
-        :class="{ primary: primaryAction === 'idle' }"
-        :disabled="isGenerateDisabled"
-        @click="handleGenerate"
+        :class="{ primary: btn.active }"
+        :disabled="btn.disabled"
+        @click="btn.handler()"
       >
-        Generate
-      </button>
-
-      <button
-        type="button"
-        :class="{ primary: primaryAction === 'scheduled' }"
-        :disabled="isStartDisabled"
-        @click="handleStart"
-      >
-        Start
-      </button>
-
-      <button
-        type="button"
-        :class="{ primary: primaryAction === 'running' }"
-        :disabled="isNextRoundDisabled"
-        @click="handleNextRound"
-      >
-        Next round
-      </button>
-
-      <button
-        type="button"
-        :class="{ primary: primaryAction === 'finished' }"
-        @click="handleReset"
-      >
-        Reset
+        {{ btn.label }}
       </button>
     </div>
   </div>

@@ -7,7 +7,7 @@ export const generateSchedule = (horses: Horse[]): RaceRound[] => {
 
   return Array.from({ length: TOTAL_ROUNDS }, (_, index) => ({
     round: index + 1,
-    distance: ROUND_DISTANCES[index],
+    distance: ROUND_DISTANCES[index]!,
     horseIds: takeRandom(horseIds, HORSES_PER_ROUND),
   }));
 };

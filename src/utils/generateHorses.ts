@@ -10,7 +10,7 @@ const generateColor = (index: number): string => {
 export const generateHorses = (): Horse[] => {
   return Array.from({ length: TOTAL_HORSES }, (_, index) => ({
     id: index + 1,
-    name: HORSE_NAMES[index],
+    name: HORSE_NAMES[index]!,
     color: generateColor(index),
     condition: getRandomInt(1, 100),
   }));

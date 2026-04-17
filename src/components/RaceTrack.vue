@@ -25,11 +25,9 @@ const onHorseTransitionEnd = (event: TransitionEvent, horseId: number): void => 
 
 type ResultItem = RoundResult['items'][number];
 
-const lastResult = computed(() => raceStore.results.at(-1));
-
 const resultByHorseId = computed(() => {
   const map = new Map<number, ResultItem>();
-  lastResult.value?.items.forEach((item) => map.set(item.horseId, item));
+  raceStore.lastResult?.items.forEach((item) => map.set(item.horseId, item));
   return map;
 });
 

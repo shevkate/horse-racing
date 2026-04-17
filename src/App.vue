@@ -43,7 +43,7 @@ onBeforeUnmount(() => {
  * at startup.
  */
 const announcement = computed(() => {
-  const last = raceStore.results.at(-1);
+  const last = raceStore.lastResult;
   if (!last) return '';
 
   const winner = last.items.find((item) => item.position === 1);

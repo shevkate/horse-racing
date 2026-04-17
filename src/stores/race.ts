@@ -42,6 +42,12 @@ export const useRaceStore = defineStore('race', () => {
     () => new Map(horses.value.map((horse) => [horse.id, horse.name])),
   );
 
+  // Most recent completed round, or undefined before the first round
+  // finishes. Lives here (not in `RaceTrack.vue`) so every consumer shares
+  // one computed instead of each component maintaining its own `.at(-1)`
+  // lookup — keeps the component's dep surface to store reads only.
+  const lastResult = computed(() => results.value.at(-1));
+
   // Schedule rounds are 1-indexed and always dense (round N sits at index
   // N-1), so we can skip the `.find` scan and index directly. Falls back
   // to `?? null` so a stale `displayedRoundNumber` pointing past the end
@@ -183,6 +189,7 @@ export const useRaceStore = defineStore('race', () => {
     status,
     displayedRoundNumber,
     horseNameById,
+    lastResult,
     displayedRound,
     // Animation state — re-exported so existing consumers (RaceTrack etc.)
     // don't need to import the animation store separately. Components that

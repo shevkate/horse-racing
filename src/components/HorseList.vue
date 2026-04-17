@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useRaceStore } from '@/stores/race'
+import { useRaceStore } from '@/stores/race';
 
-const raceStore = useRaceStore()
+const raceStore = useRaceStore();
 </script>
 
 <template>

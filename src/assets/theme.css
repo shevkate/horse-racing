@@ -59,7 +59,12 @@ body,
   min-height: 100vh;
   background-color: var(--bg-page);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

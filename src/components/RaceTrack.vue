@@ -38,19 +38,13 @@ const lanes = computed(() => {
     </header>
 
     <div class="track__lanes">
-      <div v-if="lanes.length === 0" class="track__empty">
-        Generate a schedule to see the track
-      </div>
+      <div v-if="lanes.length === 0" class="track__empty">Generate a schedule to see the track</div>
 
       <div v-for="lane in lanes" :key="lane.horseId" class="lane">
         <span class="lane__number">{{ lane.lane }}</span>
 
         <div class="lane__strip">
-          <span
-            class="lane__horse"
-            :style="{ backgroundColor: lane.color }"
-            :title="lane.name"
-          />
+          <span class="lane__horse" :style="{ backgroundColor: lane.color }" :title="lane.name" />
         </div>
 
         <span class="lane__finish" aria-hidden="true" />
@@ -61,11 +55,7 @@ const lanes = computed(() => {
 
 <style scoped>
 .track {
-  background: linear-gradient(
-    180deg,
-    var(--track-grass) 0%,
-    var(--track-grass-stripe) 100%
-  );
+  background: linear-gradient(180deg, var(--track-grass) 0%, var(--track-grass-stripe) 100%);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   box-shadow: var(--shadow-panel);

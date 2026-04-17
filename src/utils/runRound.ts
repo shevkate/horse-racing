@@ -1,13 +1,13 @@
-import type { Horse, RaceRound, RoundResult, RoundResultItem } from '@/types'
+import type { Horse, RaceRound, RoundResult, RoundResultItem } from '@/types';
 
 const calculateScore = (horse: Horse): number => {
-  return horse.condition + Math.random() * 100
-}
+  return horse.condition + Math.random() * 100;
+};
 
 export const runRound = (round: RaceRound, horses: Horse[]): RoundResult => {
   const selectedHorses = round.horseIds
     .map((horseId) => horses.find((horse) => horse.id === horseId))
-    .filter((horse): horse is Horse => Boolean(horse))
+    .filter((horse): horse is Horse => Boolean(horse));
 
   const items: RoundResultItem[] = selectedHorses
     .map((horse) => ({
@@ -18,11 +18,11 @@ export const runRound = (round: RaceRound, horses: Horse[]): RoundResult => {
     .map((horse, index) => ({
       ...horse,
       position: index + 1,
-    }))
+    }));
 
   return {
     round: round.round,
     distance: round.distance,
     items,
-  }
-}
+  };
+};

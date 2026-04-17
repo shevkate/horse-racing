@@ -1,8 +1,8 @@
 export type Horse = {
-  id: number
-  name: string
-  color: string
-  condition: number
-}
+  id: number;
+  name: string;
+  color: string;
+  condition: number;
+};
 
-export type HorseId = Horse['id']
+export type HorseId = Horse['id'];

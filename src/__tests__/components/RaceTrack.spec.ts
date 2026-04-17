@@ -208,4 +208,31 @@ describe('RaceTrack', () => {
       expect(wrapper.text()).toContain('1200m');
     });
   });
+
+  // File snapshots for the three visually distinct track states. The full
+  // `.html()` is too large for inline snapshots but each one locks a concrete
+  // visual contract (empty → starting grid → podium). Update via `vitest -u`
+  // when the template or styling intentionally changes.
+  describe('snapshots', () => {
+    it('empty state', () => {
+      setupTrack({ status: 'idle' });
+      const wrapper = mount(RaceTrack);
+
+      expect(wrapper.html()).toMatchSnapshot();
+    });
+
+    it('lineup at the start line (scheduled)', () => {
+      setupTrack({ status: 'scheduled', withLineup: true });
+      const wrapper = mount(RaceTrack);
+
+      expect(wrapper.html()).toMatchSnapshot();
+    });
+
+    it('podium view after round finishes', () => {
+      setupTrack({ status: 'paused', withLineup: true, withResult: true });
+      const wrapper = mount(RaceTrack);
+
+      expect(wrapper.html()).toMatchSnapshot();
+    });
+  });
 });

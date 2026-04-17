@@ -1,16 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 
 import { ANIMATION_TIMINGS, DURATION } from '@/constants/animation';
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
+import { useAnimationStore } from '@/stores/animation';
 import type { Horse, RaceRound } from '@/types';
-
-// The animation engine is a module-level singleton — every test must start
-// from a clean slate or leftover timers/currentAnimation leak across cases.
-const freshEngine = () => {
-  const engine = useRaceAnimation();
-  engine.reset();
-  return engine;
-};
 
 const horses: Horse[] = [
   { id: 1, name: 'Horse 1', color: 'red', condition: 90 },
@@ -26,21 +19,22 @@ const baseMs = (round.distance / DURATION.metersPerSecond) * 1000;
 const slowestMs = baseMs * (1 + DURATION.lastPlaceSlowdown);
 const fullRoundMs = ANIMATION_TIMINGS.preRollMs + slowestMs;
 
-describe('useRaceAnimation', () => {
+describe('useAnimationStore', () => {
   beforeEach(() => {
+    // Fresh Pinia = fresh engine closure (pendingTimers, generation).
+    // This is the whole reason the engine lives in a store instead of as
+    // a module-level singleton.
+    setActivePinia(createPinia());
     vi.useFakeTimers();
   });
 
   afterEach(() => {
-    // Drop any still-pending work before swapping timers back, otherwise
-    // stray setTimeouts fire against the real clock in the next test.
-    useRaceAnimation().reset();
     vi.useRealTimers();
   });
 
   describe('wait', () => {
     it('resolves true when it elapses normally', async () => {
-      const { wait } = freshEngine();
+      const { wait } = useAnimationStore();
 
       const promise = wait(100);
       await vi.advanceTimersByTimeAsync(100);
@@ -49,7 +43,7 @@ describe('useRaceAnimation', () => {
     });
 
     it('does not fire its timer after reset (cancellation is synchronous)', async () => {
-      const engine = freshEngine();
+      const engine = useAnimationStore();
       let fired = false;
       const promise = engine.wait(100).then((value) => {
         fired = true;
@@ -70,7 +64,7 @@ describe('useRaceAnimation', () => {
 
   describe('playRound', () => {
     it('resolves with a RoundResult on completion', async () => {
-      const { playRound } = freshEngine();
+      const { playRound } = useAnimationStore();
 
       const promise = playRound(round, horses);
       await vi.advanceTimersByTimeAsync(fullRoundMs);
@@ -84,15 +78,15 @@ describe('useRaceAnimation', () => {
     });
 
     it('populates currentAnimation with the lineup while running', async () => {
-      const engine = freshEngine();
+      const engine = useAnimationStore();
 
       const promise = engine.playRound(round, horses);
       // One microtask flush so buildLineup assignment is visible. We
       // haven't advanced timers yet, so we're still in the pre-roll gap.
       await Promise.resolve();
 
-      expect(engine.currentAnimation.value).toHaveLength(2);
-      expect(engine.animating.value).toBe(true);
+      expect(engine.currentAnimation).toHaveLength(2);
+      expect(engine.animating).toBe(true);
 
       // Let it finish so we don't leak the pending transition.
       await vi.advanceTimersByTimeAsync(fullRoundMs);
@@ -100,7 +94,7 @@ describe('useRaceAnimation', () => {
     });
 
     it('cleans up engine state when reset() runs mid-flight and lets a fresh round start', async () => {
-      const engine = freshEngine();
+      const engine = useAnimationStore();
 
       // Abort partway through the first round.
       void engine.playRound(round, horses);
@@ -108,8 +102,8 @@ describe('useRaceAnimation', () => {
       engine.reset();
 
       // State is wiped immediately.
-      expect(engine.currentAnimation.value).toEqual([]);
-      expect(engine.animating.value).toBe(false);
+      expect(engine.currentAnimation).toEqual([]);
+      expect(engine.animating).toBe(false);
 
       // A fresh round started post-reset still completes with a real result —
       // proves the generation counter didn't wedge the engine.
@@ -124,21 +118,21 @@ describe('useRaceAnimation', () => {
 
   describe('reset', () => {
     it('clears currentAnimation and flips animating back to false', async () => {
-      const engine = freshEngine();
+      const engine = useAnimationStore();
 
       void engine.playRound(round, horses);
       await Promise.resolve();
-      expect(engine.currentAnimation.value.length).toBeGreaterThan(0);
-      expect(engine.animating.value).toBe(true);
+      expect(engine.currentAnimation.length).toBeGreaterThan(0);
+      expect(engine.animating).toBe(true);
 
       engine.reset();
 
-      expect(engine.currentAnimation.value).toEqual([]);
-      expect(engine.animating.value).toBe(false);
+      expect(engine.currentAnimation).toEqual([]);
+      expect(engine.animating).toBe(false);
     });
 
     it('cancels every pending timer via clearTimeout', () => {
-      const engine = freshEngine();
+      const engine = useAnimationStore();
       const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
 
       // Queue two pending waits.
@@ -152,11 +146,27 @@ describe('useRaceAnimation', () => {
     });
 
     it('is safe to call when nothing is pending', () => {
-      const engine = freshEngine();
+      const engine = useAnimationStore();
 
       expect(() => engine.reset()).not.toThrow();
-      expect(engine.currentAnimation.value).toEqual([]);
-      expect(engine.animating.value).toBe(false);
+      expect(engine.currentAnimation).toEqual([]);
+      expect(engine.animating).toBe(false);
+    });
+  });
+
+  describe('store isolation', () => {
+    it('fresh Pinia gives a fresh engine — no leakage between activations', () => {
+      const first = useAnimationStore();
+      void first.wait(500);
+      first.showLineup(round, horses);
+      expect(first.currentAnimation.length).toBeGreaterThan(0);
+
+      // Swap in a new Pinia and the store re-runs its setup fn from scratch.
+      setActivePinia(createPinia());
+      const second = useAnimationStore();
+
+      expect(second.currentAnimation).toEqual([]);
+      expect(second.animating).toBe(false);
     });
   });
 });

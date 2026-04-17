@@ -5,7 +5,7 @@ import type { Horse, RaceRound } from '@/types';
  * and silently dropping ids that don't map to a known horse.
  *
  * Both the result calculation (`runRound`) and the visual lineup
- * (`useRaceAnimation`) must iterate over the *same* resolved set, otherwise
+ * (`useAnimationStore`) must iterate over the *same* resolved set, otherwise
  * the track could show a horse the result doesn't mention (or vice versa) —
  * the kind of "visual contradicts data" bug the assessment rubric flags
  * as a disqualifier. Centralising the resolution here is the single source

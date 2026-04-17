@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
 import { useRaceStore } from '@/stores/race';
 import type { Horse, RaceRound, RoundResult } from '@/types';
 import * as raceUtils from '@/utils';
@@ -29,9 +28,6 @@ describe('useRaceStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
-    // The animation engine is a module-level singleton — reset it between
-    // tests so leftover state (pending timers, currentAnimation) doesn't leak.
-    useRaceAnimation().reset();
   });
 
   describe('init', () => {

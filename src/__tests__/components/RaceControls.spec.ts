@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import RaceControls from '@/components/RaceControls.vue';
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
+import { useAnimationStore } from '@/stores/animation';
 import { useRaceStore } from '@/stores/race';
 import type { RaceStatus } from '@/types';
 
@@ -17,7 +17,7 @@ const mountComponent = (status: RaceStatus, opts: { animating?: boolean } = {}) 
   store.$patch({ status });
 
   if (opts.animating) {
-    useRaceAnimation().animating.value = true;
+    useAnimationStore().animating = true;
   }
 
   return { store, wrapper: mount(RaceControls) };
@@ -26,8 +26,6 @@ const mountComponent = (status: RaceStatus, opts: { animating?: boolean } = {}) 
 describe('RaceControls', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // Reset the singleton composable so `animating` doesn't leak across tests.
-    useRaceAnimation().reset();
   });
 
   describe('status label rendering', () => {

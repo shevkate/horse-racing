@@ -1,13 +1,17 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
 
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
 import { ANIMATION_TIMINGS } from '@/constants/animation';
+import { useAnimationStore } from '@/stores/animation';
 import type { Horse, RaceRound, RaceStatus, RoundResult } from '@/types';
 import { generateHorses, generateSchedule } from '@/utils';
 
 export const useRaceStore = defineStore('race', () => {
-  const anim = useRaceAnimation();
+  const anim = useAnimationStore();
+  // `storeToRefs` preserves reactivity when re-exporting pieces of another
+  // store — `anim.currentAnimation` on its own is already unwrapped, which
+  // would drop reactivity when we return it below.
+  const { currentAnimation, animating } = storeToRefs(anim);
 
   // ---- Domain state ------------------------------------------------------
 
@@ -27,7 +31,7 @@ export const useRaceStore = defineStore('race', () => {
   // gracefully on pause (status flips away from 'running') or reset (anim
   // cancellation signals propagate through `playRound` / `wait`).
   //
-  // Cancellation semantics live in `useRaceAnimation` — the loop never
+  // Cancellation semantics live in `useAnimationStore` — the loop never
   // touches timers directly.
   // -----------------------------------------------------------------------
 
@@ -140,10 +144,10 @@ export const useRaceStore = defineStore('race', () => {
     status,
     horseNameById,
     // Animation state — re-exported so existing consumers (RaceTrack etc.)
-    // don't need to import the composable separately. Components that care
-    // only about animation can call `useRaceAnimation()` directly.
-    currentAnimation: anim.currentAnimation,
-    animating: anim.animating,
+    // don't need to import the animation store separately. Components that
+    // care only about animation can call `useAnimationStore()` directly.
+    currentAnimation,
+    animating,
     // Actions
     init,
     createSchedule,

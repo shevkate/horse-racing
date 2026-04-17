@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import RaceTrack from '@/components/RaceTrack.vue';
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
+import { useAnimationStore } from '@/stores/animation';
 import { useRaceStore } from '@/stores/race';
 import type { Horse, RaceRound, RoundResult } from '@/types';
 
@@ -41,7 +41,7 @@ const setupTrack = (options: {
   finishedHorseIds?: number[];
 } = {}) => {
   const store = useRaceStore();
-  const anim = useRaceAnimation();
+  const anim = useAnimationStore();
 
   store.$patch({
     horses,
@@ -55,11 +55,11 @@ const setupTrack = (options: {
   }
 
   if (options.animating) {
-    anim.animating.value = true;
+    anim.animating = true;
   }
 
   if (options.finishedHorseIds?.length) {
-    anim.currentAnimation.value = anim.currentAnimation.value.map((h) =>
+    anim.currentAnimation = anim.currentAnimation.map((h) =>
       options.finishedHorseIds!.includes(h.horseId) ? { ...h, finished: true } : h,
     );
   }
@@ -70,9 +70,6 @@ const setupTrack = (options: {
 describe('RaceTrack', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
-    // Animation engine is a module-level singleton — reset between tests
-    // so leftover lineup/animating state doesn't leak.
-    useRaceAnimation().reset();
   });
 
   describe('empty state', () => {

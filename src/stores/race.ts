@@ -1,13 +1,17 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
 
-import { useRaceAnimation } from '@/composables/useRaceAnimation';
 import { ANIMATION_TIMINGS } from '@/constants/animation';
+import { useAnimationStore } from '@/stores/animation';
 import type { Horse, RaceRound, RaceStatus, RoundResult } from '@/types';
 import { generateHorses, generateSchedule } from '@/utils';
 
 export const useRaceStore = defineStore('race', () => {
-  const anim = useRaceAnimation();
+  const anim = useAnimationStore();
+  // `storeToRefs` preserves reactivity when re-exporting pieces of another
+  // store — `anim.currentAnimation` on its own is already unwrapped, which
+  // would drop reactivity when we return it below.
+  const { currentAnimation, animating } = storeToRefs(anim);
 
   // ---- Domain state ------------------------------------------------------
 
@@ -16,10 +20,23 @@ export const useRaceStore = defineStore('race', () => {
   const results = ref<RoundResult[]>([]);
   const currentRound = ref(0);
   const status = ref<RaceStatus>('idle');
+  /**
+   * Round number (1-indexed) currently shown on the track — set explicitly
+   * by `createSchedule` (preview) and by `_playLoop` (per round). Decouples
+   * the "what's on screen" question from the `currentRound`/animation state
+   * so `RaceTrack` can resolve the active round with a single lookup instead
+   * of a lineup-then-lastResult fallback chain.
+   */
+  const displayedRoundNumber = ref<number | null>(null);
 
   const horseNameById = computed(
     () => new Map(horses.value.map((horse) => [horse.id, horse.name])),
   );
+
+  const displayedRound = computed<RaceRound | null>(() => {
+    if (displayedRoundNumber.value == null) return null;
+    return schedule.value.find((r) => r.round === displayedRoundNumber.value) ?? null;
+  });
 
   // ---- Internal: auto-advance loop --------------------------------------
   //
@@ -27,7 +44,7 @@ export const useRaceStore = defineStore('race', () => {
   // gracefully on pause (status flips away from 'running') or reset (anim
   // cancellation signals propagate through `playRound` / `wait`).
   //
-  // Cancellation semantics live in `useRaceAnimation` — the loop never
+  // Cancellation semantics live in `useAnimationStore` — the loop never
   // touches timers directly.
   // -----------------------------------------------------------------------
 
@@ -40,6 +57,8 @@ export const useRaceStore = defineStore('race', () => {
       while (currentRound.value < schedule.value.length && status.value === 'running') {
         const round = schedule.value[currentRound.value];
         if (!round) break;
+
+        displayedRoundNumber.value = round.round;
 
         const result = await anim.playRound(round, horses.value);
         // Aborted (reset) — state is already cleaned up elsewhere.
@@ -77,15 +96,25 @@ export const useRaceStore = defineStore('race', () => {
     schedule.value = [];
     results.value = [];
     currentRound.value = 0;
+    displayedRoundNumber.value = null;
     status.value = 'idle';
   };
 
   /**
    * Build a fresh 6-round schedule. Doubles as the "reset" action — callable
-   * from any state. Cancels any in-flight animation, clears prior results,
-   * and shows a static round-1 preview at the start line.
+   * from `idle`, `scheduled`, `paused`, and `finished` states. Cancels any
+   * in-flight animation, clears prior results, and shows a static round-1
+   * preview at the start line.
+   *
+   * Forbidden during `running` — the UI already disables Generate mid-race,
+   * but the public API must defend itself: an accidental programmatic call
+   * would otherwise clear schedule/results while `_playLoop` still holds
+   * references to them, leaving state in an inconsistent half-reset shape.
+   * `paused` is allowed so the user can legitimately abandon a paused race.
    */
   const createSchedule = (): void => {
+    if (status.value === 'running') return;
+
     anim.reset();
     if (horses.value.length === 0) {
       horses.value = generateHorses();
@@ -96,6 +125,7 @@ export const useRaceStore = defineStore('race', () => {
     status.value = 'scheduled';
 
     const firstRound = schedule.value[0];
+    displayedRoundNumber.value = firstRound?.round ?? null;
     if (firstRound) anim.showLineup(firstRound, horses.value);
   };
 
@@ -129,12 +159,14 @@ export const useRaceStore = defineStore('race', () => {
     results,
     currentRound,
     status,
+    displayedRoundNumber,
     horseNameById,
+    displayedRound,
     // Animation state — re-exported so existing consumers (RaceTrack etc.)
-    // don't need to import the composable separately. Components that care
-    // only about animation can call `useRaceAnimation()` directly.
-    currentAnimation: anim.currentAnimation,
-    animating: anim.animating,
+    // don't need to import the animation store separately. Components that
+    // care only about animation can call `useAnimationStore()` directly.
+    currentAnimation,
+    animating,
     // Actions
     init,
     createSchedule,

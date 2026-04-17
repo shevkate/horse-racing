@@ -1,15 +1,26 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 import PanelCard from '@/components/PanelCard.vue';
 import { useRaceStore } from '@/stores/race';
 
 const raceStore = useRaceStore();
 
-const getHorseNames = (ids: number[]): string => {
-  return ids
-    .map((id) => raceStore.horseNameById.get(id))
-    .filter((name): name is string => Boolean(name))
-    .join(', ');
-};
+// Pre-resolve "H1, H2, …" strings once per schedule/roster change.
+// A method in the template re-ran on every render for every round;
+// this keyed Map means the template does a single O(1) lookup per row.
+const horseNamesByRound = computed(() => {
+  const nameById = raceStore.horseNameById;
+  return new Map(
+    raceStore.schedule.map((round) => [
+      round.round,
+      round.horseIds
+        .map((id) => nameById.get(id))
+        .filter((name): name is string => Boolean(name))
+        .join(', '),
+    ]),
+  );
+});
 </script>
 
 <template>
@@ -36,7 +47,7 @@ const getHorseNames = (ids: number[]): string => {
           <span class="round__distance">{{ round.distance }}m</span>
         </div>
 
-        <p class="round__horses">{{ getHorseNames(round.horseIds) }}</p>
+        <p class="round__horses">{{ horseNamesByRound.get(round.round) }}</p>
       </li>
     </ul>
   </PanelCard>

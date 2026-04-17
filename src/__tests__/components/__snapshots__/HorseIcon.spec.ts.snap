@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`HorseIcon — snapshots > locks the full rendered markup 1`] = `
-"<span data-v-0a5acba5="" class="horse-icon" style="color: #abcdef;" role="img" aria-label="Test"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36.663 36.663" fill="currentColor" aria-hidden="true">
+"<span class="horse-icon" style="color: #abcdef;" role="img" aria-label="Test"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36.663 36.663" fill="currentColor" aria-hidden="true">
   <!-- Source icon faces left; mirror the group so the horse runs left → right
        to match the track direction. -->
   <g transform="matrix(-1, 0, 0, 1, 36.663, 0)">

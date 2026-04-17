@@ -32,18 +32,13 @@ const laneData = computed(() =>
   }),
 );
 
-/** Round currently animating; falls back to the last completed round when idle. */
-const activeRound = computed(() => {
-  const animRound = raceStore.currentAnimation.at(0)?.round;
-  if (animRound != null) {
-    return raceStore.schedule.find((r) => r.round === animRound) ?? null;
-  }
-  const last = lastResult.value;
-  if (last) {
-    return raceStore.schedule.find((r) => r.round === last.round) ?? null;
-  }
-  return null;
-});
+/**
+ * Round shown in the header. The store maintains `displayedRound` as
+ * explicit state (set by `createSchedule` for the preview and bumped by
+ * `_playLoop` each tick), so the component doesn't have to reconstruct it
+ * from the animation lineup + lastResult fallback.
+ */
+const activeRound = computed(() => raceStore.displayedRound);
 </script>
 
 <template>
@@ -163,13 +158,9 @@ const activeRound = computed(() => {
   text-align: center;
 }
 
-/* single source of truth for all horse geometry.
-   Change --horse-size here and the lane, the icon, and the finish offset
-   (calc in inline style) all stay in sync! */
+/* Lane geometry uses --horse-size / --lane-pad from theme.css so the
+   lane, icon, bounce animation and finish offset all stay in sync. */
 .lane__strip {
-  --horse-size: 52px;
-  --lane-pad: 4px;
-
   position: relative;
   height: var(--horse-size);
   background: repeating-linear-gradient(
@@ -207,7 +198,7 @@ const activeRound = computed(() => {
 }
 
 .lane__horse--running {
-  animation: horse-run-bounce 0.35s ease-in-out infinite;
+  animation: horse-run-bounce var(--horse-bounce-duration) ease-in-out infinite;
   transform-origin: center;
 }
 
@@ -235,5 +226,15 @@ const activeRound = computed(() => {
     var(--text-primary) 6px 12px
   );
   border-radius: 2px;
+}
+
+/* Respect prefers-reduced-motion by killing the bounce animation. The
+   linear `left` transition is the race itself — without it there's
+   nothing to watch — so it stays. Dropping the vestibular-irritant
+   rotate/translateY loop is the real win for motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  .lane__horse--running {
+    animation: none;
+  }
 }
 </style>

@@ -20,7 +20,7 @@ describe('HorseList', () => {
     const wrapper = mount(HorseList);
 
     expect(wrapper.text()).toContain('No horses generated yet');
-    expect(wrapper.findAll('.list__item')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="horse-row"]')).toHaveLength(0);
   });
 
   it('renders horses list', () => {
@@ -28,7 +28,7 @@ describe('HorseList', () => {
     store.$patch({ horses });
 
     const wrapper = mount(HorseList);
-    const items = wrapper.findAll('.list__item');
+    const items = wrapper.findAll('[data-testid="horse-row"]');
 
     expect(items).toHaveLength(2);
     expect(wrapper.text()).toContain('Thunderbolt');

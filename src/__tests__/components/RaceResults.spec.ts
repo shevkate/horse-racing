@@ -114,13 +114,13 @@ describe('RaceResults', () => {
     const card = wrapper.get('[data-testid="round-result"]');
 
     expect(card.html()).toMatchInlineSnapshot(`
-      "<li data-v-98f9fb31="" class="result" data-testid="round-result" data-round="1">
-        <div data-v-98f9fb31="" class="result__head"><span data-v-98f9fb31="" class="result__round">Round 1</span><span data-v-98f9fb31="" class="result__distance">1200m</span></div>
-        <ol data-v-98f9fb31="" class="result__places">
-          <li data-v-98f9fb31="" class="place place--podium" data-testid="place" data-position="1" data-podium="true"><span data-v-98f9fb31="" class="place__medal">🥇</span><span data-v-98f9fb31="" class="place__position">1</span><span data-v-98f9fb31="" class="place__name">Thunderbolt</span></li>
-          <li data-v-98f9fb31="" class="place place--podium" data-testid="place" data-position="2" data-podium="true"><span data-v-98f9fb31="" class="place__medal">🥈</span><span data-v-98f9fb31="" class="place__position">2</span><span data-v-98f9fb31="" class="place__name">Silver Wind</span></li>
-          <li data-v-98f9fb31="" class="place place--podium" data-testid="place" data-position="3" data-podium="true"><span data-v-98f9fb31="" class="place__medal">🥉</span><span data-v-98f9fb31="" class="place__position">3</span><span data-v-98f9fb31="" class="place__name">Golden Dust</span></li>
-          <li data-v-98f9fb31="" class="place" data-testid="place" data-position="4"><span data-v-98f9fb31="" class="place__medal"></span><span data-v-98f9fb31="" class="place__position">4</span><span data-v-98f9fb31="" class="place__name">Night Dancer</span></li>
+      "<li class="result" data-testid="round-result" data-round="1">
+        <div class="result__head"><span class="result__round">Round 1</span><span class="result__distance">1200m</span></div>
+        <ol class="result__places">
+          <li class="place place--podium" data-testid="place" data-position="1" data-podium="true"><span class="place__medal">🥇</span><span class="place__position">1</span><span class="place__name">Thunderbolt</span></li>
+          <li class="place place--podium" data-testid="place" data-position="2" data-podium="true"><span class="place__medal">🥈</span><span class="place__position">2</span><span class="place__name">Silver Wind</span></li>
+          <li class="place place--podium" data-testid="place" data-position="3" data-podium="true"><span class="place__medal">🥉</span><span class="place__position">3</span><span class="place__name">Golden Dust</span></li>
+          <li class="place" data-testid="place" data-position="4"><span class="place__medal"></span><span class="place__position">4</span><span class="place__name">Night Dancer</span></li>
         </ol>
       </li>"
     `);

@@ -10,15 +10,16 @@ const statusLabels: Record<RaceStatus, string> = {
   idle: 'Ready',
   scheduled: 'Schedule ready',
   running: 'Race in progress',
+  paused: 'Paused',
   finished: 'Race finished',
-};
-const statusLabel = computed(() => statusLabels[raceStore.status]);
+}
+const statusLabel = computed(() => statusLabels[raceStore.status])
 
 const buttons = computed(() => [
   {
     label: 'Generate',
     active: raceStore.status === 'idle',
-    disabled: raceStore.status === 'running',
+    disabled: raceStore.status === 'running' || raceStore.status === 'paused',
     handler: raceStore.createSchedule,
   },
   {
@@ -28,10 +29,16 @@ const buttons = computed(() => [
     handler: raceStore.startRace,
   },
   {
-    label: 'Next round',
+    label: 'Pause',
     active: raceStore.status === 'running',
     disabled: raceStore.status !== 'running',
-    handler: raceStore.runNextRound,
+    handler: raceStore.pauseRace,
+  },
+  {
+    label: 'Resume',
+    active: raceStore.status === 'paused',
+    disabled: raceStore.status !== 'paused',
+    handler: raceStore.resumeRace,
   },
   {
     label: 'Reset',
@@ -39,7 +46,7 @@ const buttons = computed(() => [
     disabled: false,
     handler: raceStore.resetRace,
   },
-]);
+])
 </script>
 
 <template>
@@ -104,6 +111,11 @@ const buttons = computed(() => [
 
 .controls__status-dot[data-status='scheduled'] {
   background: var(--accent);
+}
+
+.controls__status-dot[data-status='paused'] {
+  background: var(--accent);
+  opacity: 0.5;
 }
 
 .controls__status-dot[data-status='finished'] {

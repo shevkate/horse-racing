@@ -100,7 +100,7 @@ need new slots.
   bounce keyframe. The linear `left` transition stays — killing it would
   make horses teleport while JS still waits the full duration, leaving
   a static track.
-- **Live region** in `App.vue` (`role="status" aria-live="polite"`) names
+- **Live region** in `App.vue` (`role="log" aria-live="polite"`) names
   round winners + the "Race finished." terminal message.
 - **<kbd>Space</kbd> shortcut** in `App.vue` calls `toggleRace()`. The
   handler skips when the focus target is `BUTTON`/`INPUT`/`TEXTAREA`/

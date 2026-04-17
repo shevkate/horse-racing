@@ -29,7 +29,7 @@ describe('App', () => {
       const wrapper = mountApp();
       const region = wrapper.get('[data-testid="race-announcer"]');
 
-      expect(region.attributes('role')).toBe('status');
+      expect(region.attributes('role')).toBe('log');
       expect(region.attributes('aria-live')).toBe('polite');
       expect(region.attributes('aria-atomic')).toBe('true');
     });

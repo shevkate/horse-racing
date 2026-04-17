@@ -59,11 +59,16 @@ const announcement = computed(() => {
 <template>
   <main class="page">
     <!-- Off-screen live region: screen readers announce round winners and
-         race completion without us having to steal focus. `polite` queues
-         the announcement after the current utterance instead of interrupting. -->
+         race completion without us having to steal focus. `role="log"` fits
+         the "sequence of entries" UX of a race commentary better than
+         `role="status"`, which semantically denotes a single current
+         state ("Loading…") rather than a running narrative. `polite`
+         queues each announcement after the current utterance instead of
+         interrupting. `aria-atomic="true"` keeps the whole message read
+         as one chunk even though only part of it changes between rounds. -->
     <div
       class="sr-only"
-      role="status"
+      role="log"
       aria-live="polite"
       aria-atomic="true"
       data-testid="race-announcer"

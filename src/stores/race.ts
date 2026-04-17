@@ -65,7 +65,16 @@ export const useRaceStore = defineStore('race', () => {
         displayedRoundNumber.value = round.round;
 
         const result = await anim.playRound(round, horses.value);
-        // Aborted (reset) — state is already cleaned up elsewhere.
+        // `playRound` returns null only when `anim.reset()` cancelled it
+        // mid-round. The only callers of reset are `init` and
+        // `createSchedule`, both synchronous: they call anim.reset() and
+        // then update `status` (to 'idle' / 'scheduled') before yielding.
+        // Our `await` can't resume until those functions return, so by
+        // the time we read `status` after this line the domain state is
+        // already coherent. Any future reset path MUST also update
+        // `status` synchronously in the same tick, or the loop would
+        // resume here with a stale 'running' status and the UI would
+        // stay mid-race.
         if (!result) return;
 
         results.value.push(result);

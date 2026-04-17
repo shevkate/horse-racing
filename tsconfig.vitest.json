@@ -8,8 +8,9 @@
 
   "compilerOptions": {
     // Vitest runs in a different environment than the application code.
-    // Adjust lib and types accordingly.
-    "lib": [],
+    // Adjust types accordingly. We intentionally keep the inherited lib
+    // (ES2022 + DOM) because app source imported transitively through
+    // stores/components still relies on browser/ES features like `.at()`.
     "types": ["node", "happy-dom"],
 
     // `vue-tsc --build` produces a .tsbuildinfo file for incremental type-checking.

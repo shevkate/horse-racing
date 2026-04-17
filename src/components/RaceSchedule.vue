@@ -4,7 +4,10 @@ import { useRaceStore } from '@/stores/race';
 const raceStore = useRaceStore();
 
 const getHorseNames = (ids: number[]): string => {
-  return ids.map((id) => raceStore.horseNameById.get(id)).join(', ');
+  return ids
+    .map((id) => raceStore.horseNameById.get(id))
+    .filter((name): name is string => Boolean(name))
+    .join(', ');
 };
 </script>
 

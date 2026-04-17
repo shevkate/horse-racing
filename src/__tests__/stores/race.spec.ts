@@ -97,6 +97,45 @@ describe('useRaceStore', () => {
       expect(store.currentAnimation.every((h) => h.duration === 0)).toBe(true);
     });
 
+    it('is a no-op while running (guards against mid-race state corruption)', () => {
+      const generateScheduleSpy = vi.spyOn(raceUtils, 'generateSchedule');
+      const store = useRaceStore();
+      store.$patch({
+        horses,
+        schedule,
+        results: [firstResult],
+        currentRound: 1,
+        status: 'running',
+      });
+
+      store.createSchedule();
+
+      // Nothing changed — UI already disables the button here, but the
+      // store action must defend itself against programmatic misuse.
+      expect(generateScheduleSpy).not.toHaveBeenCalled();
+      expect(store.schedule).toEqual(schedule);
+      expect(store.results).toEqual([firstResult]);
+      expect(store.currentRound).toBe(1);
+      expect(store.status).toBe('running');
+    });
+
+    it('is allowed from paused — user can abandon a paused race', () => {
+      vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
+      const store = useRaceStore();
+      store.$patch({
+        horses,
+        results: [firstResult],
+        currentRound: 1,
+        status: 'paused',
+      });
+
+      store.createSchedule();
+
+      expect(store.results).toEqual([]);
+      expect(store.currentRound).toBe(0);
+      expect(store.status).toBe('scheduled');
+    });
+
     it('doubles as a reset: clears results and currentRound from any state', () => {
       vi.spyOn(raceUtils, 'generateSchedule').mockReturnValue(schedule);
 

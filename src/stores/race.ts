@@ -82,10 +82,19 @@ export const useRaceStore = defineStore('race', () => {
 
   /**
    * Build a fresh 6-round schedule. Doubles as the "reset" action — callable
-   * from any state. Cancels any in-flight animation, clears prior results,
-   * and shows a static round-1 preview at the start line.
+   * from `idle`, `scheduled`, `paused`, and `finished` states. Cancels any
+   * in-flight animation, clears prior results, and shows a static round-1
+   * preview at the start line.
+   *
+   * Forbidden during `running` — the UI already disables Generate mid-race,
+   * but the public API must defend itself: an accidental programmatic call
+   * would otherwise clear schedule/results while `_playLoop` still holds
+   * references to them, leaving state in an inconsistent half-reset shape.
+   * `paused` is allowed so the user can legitimately abandon a paused race.
    */
   const createSchedule = (): void => {
+    if (status.value === 'running') return;
+
     anim.reset();
     if (horses.value.length === 0) {
       horses.value = generateHorses();

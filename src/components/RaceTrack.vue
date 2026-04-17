@@ -49,18 +49,25 @@ const activeRound = computed(() => {
 <template>
   <section class="track">
     <header class="track__header">
-      <h2 class="track__title">
+      <h2 class="track__title" data-testid="track-title">
         <span v-if="activeRound">Round {{ activeRound.round }} — {{ activeRound.distance }}m</span>
         <span v-else class="track__title--muted">Awaiting race</span>
       </h2>
     </header>
 
-    <div class="track__lanes">
-      <div v-if="laneData.length === 0" class="track__empty">
+    <div class="track__lanes" data-testid="track-lanes">
+      <div v-if="laneData.length === 0" class="track__empty" data-testid="track-empty">
         {{ raceStore.status === 'idle' ? 'Click Generate to load horses' : 'Preparing track…' }}
       </div>
 
-      <div v-for="lane in laneData" :key="`${lane.round}-${lane.horseId}`" class="lane">
+      <div
+        v-for="lane in laneData"
+        :key="`${lane.round}-${lane.horseId}`"
+        class="lane"
+        data-testid="lane"
+        :data-horse-id="lane.horseId"
+        :data-finished="lane.finished || null"
+      >
         <span class="lane__number">{{ lane.lane }}</span>
 
         <div class="lane__strip">
@@ -82,7 +89,12 @@ const activeRound = computed(() => {
             }"
             :label="lane.name"
           />
-          <span v-if="lane.podiumPosition !== null" class="lane__badge">
+          <span
+            v-if="lane.podiumPosition !== null"
+            class="lane__badge"
+            data-testid="podium-badge"
+            :data-position="lane.podiumPosition"
+          >
             <span>#{{ lane.podiumPosition }}</span>
             {{ lane.name }}
           </span>

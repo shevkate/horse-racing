@@ -15,7 +15,7 @@ const getHorseNames = (ids: number[]): string => {
   <section class="panel">
     <h2 class="panel__title">Race Schedule</h2>
 
-    <ul v-if="raceStore.schedule.length" class="list">
+    <ul v-if="raceStore.schedule.length" class="list" data-testid="schedule-list">
       <li
         v-for="round in raceStore.schedule"
         :key="round.round"
@@ -24,6 +24,9 @@ const getHorseNames = (ids: number[]): string => {
           'round--active': round.round === raceStore.currentRound + 1,
           'round--done': round.round <= raceStore.currentRound,
         }"
+        data-testid="schedule-round"
+        :data-round="round.round"
+        :data-active="round.round === raceStore.currentRound + 1 || null"
       >
         <div class="round__head">
           <span class="round__number">Round {{ round.round }}</span>

@@ -8,8 +8,13 @@ const raceStore = useRaceStore();
   <section class="panel">
     <h2 class="panel__title">Horses</h2>
 
-    <ul v-if="raceStore.horses.length" class="list">
-      <li v-for="horse in raceStore.horses" :key="horse.id" class="list__item">
+    <ul v-if="raceStore.horses.length" class="list" data-testid="horse-list">
+      <li
+        v-for="horse in raceStore.horses"
+        :key="horse.id"
+        class="list__item"
+        data-testid="horse-row"
+      >
         <span class="horse">
           <span
             class="horse__color"

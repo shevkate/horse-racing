@@ -18,30 +18,35 @@ const statusLabel = computed(() => statusLabels[raceStore.status])
 const buttons = computed(() => [
   {
     label: 'Generate',
+    testId: 'btn-generate',
     active: raceStore.status === 'idle',
     disabled: raceStore.status === 'running' || raceStore.status === 'paused',
     handler: raceStore.createSchedule,
   },
   {
     label: 'Start',
+    testId: 'btn-start',
     active: raceStore.status === 'scheduled',
     disabled: raceStore.status !== 'scheduled',
     handler: raceStore.startRace,
   },
   {
     label: 'Pause',
+    testId: 'btn-pause',
     active: raceStore.status === 'running',
     disabled: raceStore.status !== 'running',
     handler: raceStore.pauseRace,
   },
   {
     label: 'Resume',
+    testId: 'btn-resume',
     active: raceStore.status === 'paused',
     disabled: raceStore.status !== 'paused',
     handler: raceStore.resumeRace,
   },
   {
     label: 'Reset',
+    testId: 'btn-reset',
     active: raceStore.status === 'finished',
     disabled: false,
     handler: raceStore.resetRace,
@@ -51,7 +56,7 @@ const buttons = computed(() => [
 
 <template>
   <div class="controls">
-    <span class="controls__status">
+    <span class="controls__status" data-testid="race-status" :data-status="raceStore.status">
       <span class="controls__status-dot" :data-status="raceStore.status" />
       {{ statusLabel }}
     </span>
@@ -63,6 +68,8 @@ const buttons = computed(() => [
         type="button"
         :class="{ primary: btn.active }"
         :disabled="btn.disabled"
+        :data-testid="btn.testId"
+        :data-active="btn.active || null"
         @click="btn.handler()"
       >
         {{ btn.label }}

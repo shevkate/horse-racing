@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onErrorCaptured, onMounted, ref } from 'vue';
 
 import HorseList from '@/components/HorseList.vue';
 import RaceControls from '@/components/RaceControls.vue';
@@ -9,6 +9,34 @@ import RaceTrack from '@/components/RaceTrack.vue';
 import { useRaceStore } from '@/stores/race';
 
 const raceStore = useRaceStore();
+
+/**
+ * Top-level error boundary. `onErrorCaptured` catches anything thrown in a
+ * descendant component's setup / render / lifecycle. We swap the UI for a
+ * fallback so a broken child doesn't leave the whole page blank (Vue's
+ * default behaviour when a render throws), and a Reload button wipes
+ * store state via `init()` so the user can recover without a full page
+ * refresh. Returning `false` stops propagation so the error doesn't
+ * bubble further than necessary — it's already surfaced here.
+ *
+ * Intentionally broad: the boundary doesn't try to distinguish "error we
+ * know how to recover from" vs "fatal". Showing the fallback is the one
+ * graceful behaviour we can guarantee regardless of cause.
+ */
+const capturedError = ref<Error | null>(null);
+
+onErrorCaptured((error) => {
+  console.error('[App] captured render error:', error);
+  capturedError.value = error instanceof Error ? error : new Error(String(error));
+  return false;
+});
+
+const recoverFromError = (): void => {
+  capturedError.value = null;
+  // Re-initialise the domain state so the fallback never hands control
+  // back to a half-broken store (e.g. mid-race when the crash fired).
+  raceStore.init();
+};
 
 /**
  * Global Space shortcut → toggle race. Browsers already activate a focused
@@ -57,7 +85,25 @@ const announcement = computed(() => {
 </script>
 
 <template>
-  <main class="page">
+  <!-- Fallback UI when a descendant component threw. Kept deliberately
+       minimal so the boundary itself can't be the next thing to crash. -->
+  <main v-if="capturedError" class="page page--error" role="alert" data-testid="error-boundary">
+    <h1 class="page__title">Something went wrong</h1>
+    <p class="error-boundary__message">
+      The race app hit an unexpected error and had to stop. You can reload the race to try again.
+    </p>
+    <pre class="error-boundary__detail" data-testid="error-boundary-detail">{{ capturedError.message }}</pre>
+    <button
+      type="button"
+      class="primary"
+      data-testid="error-boundary-reset"
+      @click="recoverFromError"
+    >
+      Reload race
+    </button>
+  </main>
+
+  <main v-else class="page">
     <!-- Off-screen live region: screen readers announce round winners and
          race completion without us having to steal focus. `role="log"` fits
          the "sequence of entries" UX of a race commentary better than
@@ -176,5 +222,27 @@ const announcement = computed(() => {
       'main'
       'schedule';
   }
+}
+
+.page--error {
+  align-items: flex-start;
+  max-width: 720px;
+}
+
+.error-boundary__message {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.error-boundary__detail {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--bg-track-fill);
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>

@@ -1,0 +1,117 @@
+:root {
+  /* Background layers */
+  --bg-page: #0a1410;
+  --bg-surface: #16211c;
+  --bg-surface-elevated: #1e2a23;
+
+  /* Track colors */
+  --track-grass: #2d5016;
+  --track-grass-stripe: #355e1b;
+  --track-lane: #8b6f47;
+  --track-lane-alt: #7a5f3d;
+  --track-finish: #d84343;
+
+  /* Accent */
+  --accent: #f5c518;
+  --accent-muted: #c9a213;
+  --accent-danger: #d84343;
+
+  /* Condition gradient (low → high) */
+  --condition-low: #ef4444;
+  --condition-mid: #eab308;
+  --condition-high: #22c55e;
+  --bg-track-fill: rgba(255, 255, 255, 0.08);
+
+  /* Text */
+  --text-primary: #e8ece8;
+  --text-secondary: #9aa89e;
+  --text-muted: #6b7870;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Shadows */
+  --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+button {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--bg-page);
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--bg-page);
+  border-color: var(--accent);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-muted);
+  border-color: var(--accent-muted);
+}

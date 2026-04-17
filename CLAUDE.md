@@ -94,6 +94,24 @@ title empty empty-message>`. Don't re-duplicate `.panel` / `.panel__title`
 / `.panel__empty` styles in new side panels — extend `PanelCard` if you
 need new slots.
 
+### Error boundary in `App.vue`
+
+`onErrorCaptured` catches throws from any descendant's setup / render /
+lifecycle and swaps the main UI for a minimal fallback (`role="alert"`,
+`data-testid="error-boundary"`) with a Reload button that calls
+`raceStore.init()`. The handler returns `false` to stop propagation —
+the error is already surfaced here. Keep the fallback deliberately
+small so the boundary itself can't be the next thing to crash.
+
+### Responsive layout via `grid-template-areas`
+
+Three breakpoints in `App.vue` rewire which panel sits where without
+duplicating markup: three-col (≥1100px) → horses sidebar + full-width
+schedule (700-1099px) → single stack (<700px). Panels use
+`.page__side--horses` / `.page__side--schedule` modifier classes bound
+to `grid-area`. If you add a new panel, do the same — don't
+re-introduce per-breakpoint markup branches.
+
 ### Accessibility triad
 
 - **`prefers-reduced-motion`** (in `RaceTrack.vue`) disables only the
@@ -156,7 +174,9 @@ npm run test:e2e   # runs against built preview; ~2 minutes
 
 E2E is slow (real CSS transitions, ~30s per full race), so run it last
 and only when the rest is green. CI runs **ci** and **e2e** as parallel
-jobs on every PR.
+jobs on every PR. The **ci** job also enforces a gzipped bundle-size
+gate (JS ≤ 45 KB, CSS ≤ 5 KB) — if you need to raise a limit, raise it
+in the same commit as the change that needs it, don't bump silently.
 
 ## Gotchas
 

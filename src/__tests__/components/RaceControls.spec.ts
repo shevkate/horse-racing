@@ -57,6 +57,13 @@ describe('RaceControls', () => {
       expect(toggle.text()).toBe(label);
       expect(toggle.attributes('data-action')).toBe(label.toLowerCase());
     });
+
+    it('shows "Running" while a round is animating (more honest than a disabled "Pause")', () => {
+      const { wrapper } = mountComponent('running', { animating: true });
+      const toggle = wrapper.get('[data-testid="btn-toggle"]');
+
+      expect(toggle.text()).toBe('Running');
+    });
   });
 
   describe('enabled/disabled matrix', () => {

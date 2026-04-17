@@ -23,9 +23,17 @@ const statusLabel = computed(() => statusLabels[raceStore.status]);
 const generateDisabled = computed(() => raceStore.status === 'running');
 
 // Toggle label tracks the transition the click would cause:
-//   scheduled/paused → "Start" (idle state for the toggle)
-//   running          → "Pause"
-const toggleLabel = computed(() => (raceStore.status === 'running' ? 'Pause' : 'Start'));
+//   scheduled/paused        → "Start" (idle state for the toggle)
+//   running + animating     → "Running" (disabled — pause only takes
+//                                        effect between rounds)
+//   running + !animating    → "Pause"  (between-rounds window)
+// Showing "Running" instead of a disabled "Pause" avoids the label
+// flickering between the same text across enabled/disabled states and
+// reads as a more honest explanation of why the click does nothing.
+const toggleLabel = computed(() => {
+  if (raceStore.status !== 'running') return 'Start';
+  return raceStore.animating ? 'Running' : 'Pause';
+});
 
 // Disabled when there's nothing to start (no schedule or race over), and
 // mid-round while animating — pause only has an effect between rounds, so

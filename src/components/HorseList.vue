@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import PanelCard from '@/components/PanelCard.vue';
 import { useRaceStore } from '@/stores/race';
 
 const raceStore = useRaceStore();
 </script>
 
 <template>
-  <section class="panel">
-    <h2 class="panel__title">Horses</h2>
-
-    <ul v-if="raceStore.horses.length" class="list" data-testid="horse-list">
+  <PanelCard
+    title="Horses"
+    :empty="!raceStore.horses.length"
+    empty-message="No horses generated yet"
+  >
+    <ul class="list" data-testid="horse-list">
       <li
         v-for="horse in raceStore.horses"
         :key="horse.id"
@@ -38,34 +41,10 @@ const raceStore = useRaceStore();
         </span>
       </li>
     </ul>
-
-    <p v-else class="panel__empty">No horses generated yet</p>
-  </section>
+  </PanelCard>
 </template>
 
 <style scoped>
-.panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-panel);
-}
-
-.panel__title {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  margin-bottom: var(--space-md);
-}
-
-.panel__empty {
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 0;
-}
-
 .list {
   list-style: none;
   margin: 0;

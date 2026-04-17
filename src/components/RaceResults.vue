@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PanelCard from '@/components/PanelCard.vue';
 import { useRaceStore } from '@/stores/race';
 
 const raceStore = useRaceStore();
@@ -12,10 +13,12 @@ const medalFor = (position: number): string => {
 </script>
 
 <template>
-  <section class="panel">
-    <h2 class="panel__title">Results</h2>
-
-    <ul v-if="raceStore.results.length" class="list" data-testid="results-list">
+  <PanelCard
+    title="Results"
+    :empty="!raceStore.results.length"
+    empty-message="No results yet. Start the race"
+  >
+    <ul class="list" data-testid="results-list">
       <li
         v-for="result in raceStore.results"
         :key="result.round"
@@ -47,34 +50,10 @@ const medalFor = (position: number): string => {
         </ol>
       </li>
     </ul>
-
-    <p v-else class="panel__empty">No results yet. Start the race</p>
-  </section>
+  </PanelCard>
 </template>
 
 <style scoped>
-.panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-panel);
-}
-
-.panel__title {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  margin-bottom: var(--space-md);
-}
-
-.panel__empty {
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 0;
-}
-
 .list {
   list-style: none;
   margin: 0;

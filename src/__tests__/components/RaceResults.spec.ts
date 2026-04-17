@@ -102,4 +102,27 @@ describe('RaceResults', () => {
     expect(places[2].classes()).toContain('place--podium');
     expect(places[3].classes()).not.toContain('place--podium');
   });
+
+  // Inline snapshot of a single result card — locks the medal/position/name
+  // layout plus the podium data-attributes that E2E relies on. Small enough
+  // to read at a glance; any diff here is a meaningful visual change.
+  it('matches inline snapshot for a full result card', () => {
+    const store = useRaceStore();
+    store.$patch({ horses, results });
+
+    const wrapper = mount(RaceResults);
+    const card = wrapper.get('[data-testid="round-result"]');
+
+    expect(card.html()).toMatchInlineSnapshot(`
+      "<li data-v-98f9fb31="" class="result" data-testid="round-result" data-round="1">
+        <div data-v-98f9fb31="" class="result__head"><span data-v-98f9fb31="" class="result__round">Round 1</span><span data-v-98f9fb31="" class="result__distance">1200m</span></div>
+        <ol data-v-98f9fb31="" class="result__places">
+          <li data-v-98f9fb31="" class="place place--podium" data-testid="place" data-position="1" data-podium="true"><span data-v-98f9fb31="" class="place__medal">🥇</span><span data-v-98f9fb31="" class="place__position">1</span><span data-v-98f9fb31="" class="place__name">Thunderbolt</span></li>
+          <li data-v-98f9fb31="" class="place place--podium" data-testid="place" data-position="2" data-podium="true"><span data-v-98f9fb31="" class="place__medal">🥈</span><span data-v-98f9fb31="" class="place__position">2</span><span data-v-98f9fb31="" class="place__name">Silver Wind</span></li>
+          <li data-v-98f9fb31="" class="place place--podium" data-testid="place" data-position="3" data-podium="true"><span data-v-98f9fb31="" class="place__medal">🥉</span><span data-v-98f9fb31="" class="place__position">3</span><span data-v-98f9fb31="" class="place__name">Golden Dust</span></li>
+          <li data-v-98f9fb31="" class="place" data-testid="place" data-position="4"><span data-v-98f9fb31="" class="place__medal"></span><span data-v-98f9fb31="" class="place__position">4</span><span data-v-98f9fb31="" class="place__name">Night Dancer</span></li>
+        </ol>
+      </li>"
+    `);
+  });
 });

@@ -15,8 +15,14 @@ const medalFor = (position: number): string => {
   <section class="panel">
     <h2 class="panel__title">Results</h2>
 
-    <ul v-if="raceStore.results.length" class="list">
-      <li v-for="result in raceStore.results" :key="result.round" class="result">
+    <ul v-if="raceStore.results.length" class="list" data-testid="results-list">
+      <li
+        v-for="result in raceStore.results"
+        :key="result.round"
+        class="result"
+        data-testid="round-result"
+        :data-round="result.round"
+      >
         <div class="result__head">
           <span class="result__round">Round {{ result.round }}</span>
           <span class="result__distance">{{ result.distance }}m</span>
@@ -28,6 +34,9 @@ const medalFor = (position: number): string => {
             :key="item.horseId"
             class="place"
             :class="{ 'place--podium': item.position <= 3 }"
+            data-testid="place"
+            :data-position="item.position"
+            :data-podium="item.position <= 3 || null"
           >
             <span class="place__medal">{{ medalFor(item.position) }}</span>
             <span class="place__position">{{ item.position }}</span>

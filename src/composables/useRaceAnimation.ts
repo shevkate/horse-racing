@@ -2,6 +2,7 @@ import { ref } from 'vue';
 
 import { ANIMATION_TIMINGS, DURATION } from '@/constants/animation';
 import type { Horse, HorseId, RaceRound, RoundResult, RoundResultItem } from '@/types';
+import { resolveRoundHorses } from '@/utils/resolveRoundHorses';
 import { runRound } from '@/utils/runRound';
 
 // ---------------------------------------------------------------------------
@@ -47,21 +48,21 @@ const computeDurations = (
 };
 
 const buildLineup = (round: RaceRound, horses: Horse[]): HorseAnimation[] => {
-  const byId = new Map(horses.map((h) => [h.id, h]));
-
-  return round.horseIds.map((horseId, index) => {
-    const horse = byId.get(horseId);
-    return {
-      round: round.round,
-      horseId,
-      color: horse?.color ?? '#888',
-      name: horse?.name ?? '',
-      lane: index + 1,
-      progress: 0,
-      duration: 0,
-      finished: false,
-    };
-  });
+  // Use the shared resolver so the lineup contains exactly the same horses
+  // `runRound` will score for the result. Previously this rendered a ghost
+  // lane (gray fallback, empty name) for ids missing from the roster while
+  // `runRound` silently dropped them — a podium lookup would then miss and
+  // the track could disagree with the results.
+  return resolveRoundHorses(round, horses).map((horse, index) => ({
+    round: round.round,
+    horseId: horse.id,
+    color: horse.color,
+    name: horse.name,
+    lane: index + 1,
+    progress: 0,
+    duration: 0,
+    finished: false,
+  }));
 };
 
 // ---------------------------------------------------------------------------

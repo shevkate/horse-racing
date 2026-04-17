@@ -1,15 +1,16 @@
 import type { Horse, RaceRound, RoundResult, RoundResultItem } from '@/types';
 
+import { resolveRoundHorses } from './resolveRoundHorses';
+
 const calculateScore = (horse: Horse): number => {
   return horse.condition + Math.random() * 100;
 };
 
 export const runRound = (round: RaceRound, horses: Horse[]): RoundResult => {
-  // Build an id→horse lookup once instead of doing an O(n) `find` per participant.
-  const byId = new Map(horses.map((horse) => [horse.id, horse]));
-  const selectedHorses = round.horseIds
-    .map((horseId) => byId.get(horseId))
-    .filter((horse): horse is Horse => Boolean(horse));
+  // `resolveRoundHorses` is also what the animation composable uses to build
+  // the visual lineup — keeping both paths in sync is what prevents a horse
+  // from appearing on the track without a row in the results (and vice versa).
+  const selectedHorses = resolveRoundHorses(round, horses);
 
   const items: RoundResultItem[] = selectedHorses
     .map((horse) => ({

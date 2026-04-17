@@ -227,4 +227,14 @@ const activeRound = computed(() => raceStore.displayedRound);
   );
   border-radius: 2px;
 }
+
+/* Respect prefers-reduced-motion by killing the bounce animation. The
+   linear `left` transition is the race itself — without it there's
+   nothing to watch — so it stays. Dropping the vestibular-irritant
+   rotate/translateY loop is the real win for motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  .lane__horse--running {
+    animation: none;
+  }
+}
 </style>

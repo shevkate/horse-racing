@@ -42,23 +42,31 @@ describe('useAnimationStore', () => {
       await expect(promise).resolves.toBe(true);
     });
 
-    it('does not fire its timer after reset (cancellation is synchronous)', async () => {
+    it('resolves false when reset cancels it', async () => {
       const engine = useAnimationStore();
-      let fired = false;
-      const promise = engine.wait(100).then((value) => {
-        fired = true;
-        return value;
-      });
+      const promise = engine.wait(100);
 
       engine.reset();
-      await vi.advanceTimersByTimeAsync(100);
-      // Flush any microtasks that a rogue timer callback would have queued.
-      await Promise.resolve();
 
-      expect(fired).toBe(false);
-      // Keep the unresolved promise reference alive until test teardown —
-      // vitest doesn't care about pending promises, they just get GC'd.
-      void promise;
+      // Resolver is invoked synchronously during reset() — no need to
+      // advance fake timers. This is what lets `finally` blocks and any
+      // state updates past `await wait(...)` run after a cancellation
+      // instead of hanging forever.
+      await expect(promise).resolves.toBe(false);
+    });
+
+    it('does not let the cancelled timer fire later', async () => {
+      const engine = useAnimationStore();
+      const promise = engine.wait(100);
+
+      engine.reset();
+      // The underlying setTimeout was clearTimeout'd, but even if it slipped
+      // through, the resolver has already been called once — a second call
+      // is a no-op. Advancing the clock must not re-settle the promise or
+      // throw.
+      await vi.advanceTimersByTimeAsync(500);
+
+      await expect(promise).resolves.toBe(false);
     });
   });
 

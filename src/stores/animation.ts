@@ -90,29 +90,46 @@ export const useAnimationStore = defineStore('animation', () => {
   const currentAnimation = ref<HorseAnimation[]>([]);
   const animating = ref(false);
 
-  const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+  // Each pending wait is tracked as its timer handle *and* its resolver, so
+  // `reset()` can both cancel the timer and settle the promise with `false`.
+  // The previous version only stored the handle, which meant an aborted
+  // `wait()` promise never settled at all — safe today, but it leaks pending
+  // awaiters and prevents any `finally`/cleanup downstream of `await wait(...)`
+  // from ever running. Resolving with `false` on cancel keeps the async graph
+  // observable and composable.
+  interface PendingTimer {
+    handle: ReturnType<typeof setTimeout>;
+    resolve: (completed: boolean) => void;
+  }
+  const pendingTimers = new Set<PendingTimer>();
   let generation = 0;
 
   /**
-   * Cancellable sleep. Resolves to `true` if it elapsed normally. The timer
-   * is cleared synchronously by `reset()`, so an aborted wait simply never
-   * settles — the generation guard inside the callback is defence-in-depth
-   * for the case where a timer callback has already been queued but not yet
-   * run when `reset()` runs.
+   * Cancellable sleep. Resolves to `true` if it elapsed normally and to
+   * `false` if `reset()` cancelled it. Callers use the boolean to decide
+   * whether to keep mutating state — the generation counter is still the
+   * authoritative abort signal for multi-step flows (see `playRound`), but
+   * single-step waiters can branch on the return value alone.
    */
   const wait = (ms: number): Promise<boolean> => {
     const snapshot = generation;
     return new Promise((resolve) => {
-      const handle = setTimeout(() => {
-        pendingTimers.delete(handle);
-        resolve(snapshot === generation);
-      }, ms);
-      pendingTimers.add(handle);
+      const entry: PendingTimer = {
+        handle: setTimeout(() => {
+          pendingTimers.delete(entry);
+          resolve(snapshot === generation);
+        }, ms),
+        resolve,
+      };
+      pendingTimers.add(entry);
     });
   };
 
   const reset = (): void => {
-    for (const handle of pendingTimers) clearTimeout(handle);
+    for (const entry of pendingTimers) {
+      clearTimeout(entry.handle);
+      entry.resolve(false); // unblock awaiters so downstream cleanup can run
+    }
     pendingTimers.clear();
     generation += 1; // invalidate any async work that survives the clear
     currentAnimation.value = [];

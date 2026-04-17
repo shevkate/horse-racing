@@ -125,4 +125,25 @@ const raceStore = useRaceStore();
   color: var(--text-primary);
   pointer-events: none;
 }
+
+/* In the medium layout HorseList shrinks to a 200px sidebar — the 120px
+   condition bar would leave almost no room for the horse name, so shave
+   it to 80px there. Wider bar returns at the large breakpoint; at the
+   narrow breakpoint (phones) the panel goes full-width and we can
+   afford the full 120px again. */
+@media (max-width: 1100px) and (min-width: 701px) {
+  .horse__condition {
+    width: 80px;
+  }
+}
+
+/* On phones the 70vh cap would still eat most of the viewport before the
+   track came into view, defeating the point of the mobile stack order.
+   Cap the list to ~300px here — enough to see 5-6 horses at once and
+   scroll for the rest, while the track stays above the fold. */
+@media (max-width: 700px) {
+  .list {
+    max-height: 300px;
+  }
+}
 </style>

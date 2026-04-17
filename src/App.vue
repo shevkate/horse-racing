@@ -82,7 +82,7 @@ const announcement = computed(() => {
     </header>
 
     <section class="page__grid">
-      <aside class="page__side">
+      <aside class="page__side page__side--horses">
         <HorseList />
       </aside>
 
@@ -91,7 +91,7 @@ const announcement = computed(() => {
         <RaceResults />
       </section>
 
-      <aside class="page__side">
+      <aside class="page__side page__side--schedule">
         <RaceSchedule />
       </aside>
     </section>
@@ -121,18 +121,36 @@ const announcement = computed(() => {
   letter-spacing: 0.04em;
 }
 
+/* Three layouts driven by two breakpoints. `grid-template-areas` keeps the
+   DOM order stable while letting each breakpoint re-wire which panel sits
+   where, so no duplication of markup per viewport.
+   - Wide    (≥1100px): horses | track | schedule  (original 3-col layout)
+   - Medium  (700-1099px): horses sidebar beside the track, schedule
+     promoted to full-width below — HorseList is secondary reference data
+     and shouldn't claim a full-width row of its own at this size.
+   - Narrow  (<700px): single-column stack for phones. */
 .page__grid {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
+  grid-template-areas: 'horses main schedule';
   gap: var(--space-lg);
   align-items: start;
 }
 
+.page__side--horses {
+  grid-area: horses;
+}
+
 .page__main {
+  grid-area: main;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
   min-height: 500px;
+}
+
+.page__side--schedule {
+  grid-area: schedule;
 }
 
 .page__side {
@@ -143,7 +161,20 @@ const announcement = computed(() => {
 
 @media (max-width: 1100px) {
   .page__grid {
+    grid-template-columns: 200px 1fr;
+    grid-template-areas:
+      'horses main'
+      'schedule schedule';
+  }
+}
+
+@media (max-width: 700px) {
+  .page__grid {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'horses'
+      'main'
+      'schedule';
   }
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PanelCard from '@/components/PanelCard.vue';
 import { useRaceStore } from '@/stores/race';
 
 const raceStore = useRaceStore();
@@ -12,10 +13,12 @@ const getHorseNames = (ids: number[]): string => {
 </script>
 
 <template>
-  <section class="panel">
-    <h2 class="panel__title">Race Schedule</h2>
-
-    <ul v-if="raceStore.schedule.length" class="list" data-testid="schedule-list">
+  <PanelCard
+    title="Race Schedule"
+    :empty="!raceStore.schedule.length"
+    empty-message="No schedule. Click Generate"
+  >
+    <ul class="list" data-testid="schedule-list">
       <li
         v-for="round in raceStore.schedule"
         :key="round.round"
@@ -36,34 +39,10 @@ const getHorseNames = (ids: number[]): string => {
         <p class="round__horses">{{ getHorseNames(round.horseIds) }}</p>
       </li>
     </ul>
-
-    <p v-else class="panel__empty">No schedule. Click Generate</p>
-  </section>
+  </PanelCard>
 </template>
 
 <style scoped>
-.panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-panel);
-}
-
-.panel__title {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  margin-bottom: var(--space-md);
-}
-
-.panel__empty {
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 0;
-}
-
 .list {
   list-style: none;
   margin: 0;
